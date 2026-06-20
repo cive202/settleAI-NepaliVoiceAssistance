@@ -1,88 +1,60 @@
 """
-Nepali Voice Agent — Phase 2 (VAD Pipeline)
-============================================
-Pipeline: Mic → Silero VAD → Whisper ASR → LLM (NVIDIA) → gTTS → Playback
+main.py — Entry point for SettleAI Nepali Voice Agent.
 
+Only responsible for:
+  1. Initialising all components once
+  2. Running the main loop
+  3. Shutting down cleanly
 """
 
-import os
-import tempfile
 import pygame
-from gtts import gTTS
 
-import config
-from vad import VAD
+from config import WHISPER_MODEL, VAD_THRESHOLD, LLM_MODEL, API_KEY, SYSTEM_PROMPT
 from asr import ASR
+from vad import VAD
 from llm import LLM
-
-vad = VAD(threshold=config.VAD_THRESHOLD)
-asr = ASR(model_name=config.WHISPER_MODEL)
-llm = LLM(
-    api_key=config.API_KEY, model=config.LLM_MODEL, system_prompt=config.SYSTEM_PROMPT
-)
-pygame.mixer.init()
-
-conversation_history = [{"role": "system", "content": config.SYSTEM_PROMPT}]
+from tts import TTS
 
 
-# ──────────────────────────────────────────────
-# STEP 4 — TTS
-# ──────────────────────────────────────────────
-def speak_nepali(text: str) -> None:
-    print("PLEASE SPEAK")
-    tts = gTTS(text=text, lang="ne")
+def main() -> None:
+    # ── 1. INIT ──────────────────────────────
+    pygame.mixer.init()
 
-    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
-        tmp_path = f.name
+    vad = VAD(threshold=VAD_THRESHOLD)
+    asr = ASR(model_name=WHISPER_MODEL)
+    llm = LLM(api_key=API_KEY, model=LLM_MODEL, system_prompt=SYSTEM_PROMPT)
+    tts = TTS()
 
-    try:
-        tts.save(tmp_path)
-        pygame.mixer.music.load(tmp_path)
-        pygame.mixer.music.play()
-        while pygame.mixer.music.get_busy():
-            pygame.time.Clock().tick(10)
-    finally:
-        pygame.mixer.music.unload()
-        os.unlink(tmp_path)
+    print("\n" + "=" * 50)
+    print("Jay Settle Panthi ")
+    print("=" * 50 + "\n")
 
-
-# ──────────────────────────────────────────────
-# MAIN LOOP
-# ──────────────────────────────────────────────
-def run_agent() -> None:
-    print("=" * 55)
-    print("Running_Agent")
-
+    # ── 2. LOOP ──────────────────────────────
     turn = 1
     while True:
-        print(f"─── step {turn} ───")
+        print(f"─── Turn {turn} ───")
 
-        # 1. Record (VAD-controlled)
         audio = vad.record()
         if audio is None:
-            print("Not audiable\n")
             continue
 
-        # 2. Transcribe
-        user_text = asr.transcribe_nepali(audio)
-        if not user_text:
-            print("Please Speak again\n")
+        text = asr.transcribe(audio)
+        if not text:
+            print("Nothing transcribed, try again.\n")
             continue
-        print(f"You : {user_text}")
 
-        # 3. LLM
-        response_text = llm.get_response(user_text)
-        print(f"SettleAI: {response_text}\n")
+        print(f"You     : {text}")
 
-        # 4. Speak
-        speak_nepali(response_text)
+        reply = llm.get_response(text)
+        print(f"SettleAI: {reply}\n")
 
+        tts.speak(reply)
         turn += 1
 
 
 if __name__ == "__main__":
     try:
-        run_agent()
+        main()
     except KeyboardInterrupt:
-        print("\n\nLA hai ta SETTLE ")
+        print("\n\nLA hai ta SETTLE Guys")
         pygame.mixer.quit()

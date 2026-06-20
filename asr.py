@@ -10,7 +10,7 @@ class ASR:
     def _load_model(self, model_name=WHISPER_MODEL):
         return whisper.load_model(model_name)
 
-    def transcribe_nepali(self, audio_np: np.ndarray) -> str:
+    def transcribe(self, audio_np: np.ndarray) -> str:
         """
         Transcribes a float32 numpy audio array to text.
 
