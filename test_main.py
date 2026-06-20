@@ -7,8 +7,6 @@ Pipeline: Mic → Silero VAD → Whisper ASR → LLM (NVIDIA) → gTTS → Playb
 
 import os
 import tempfile
-import whisper
-import numpy as np
 import pygame
 from gtts import gTTS
 from openai import OpenAI
@@ -16,6 +14,7 @@ from dotenv import load_dotenv
 
 import config
 from vad import VAD
+from asr import ASR
 
 # ──────────────────────────────────────────────
 # INIT
@@ -31,24 +30,13 @@ client = OpenAI(
     api_key=api_key,
 )
 
-print(" Whisper loading....")
-asr_model = whisper.load_model(config.WHISPER_MODEL)
-print("Whisper loaded")
 
 vad = VAD(threshold=config.VAD_THRESHOLD)
+asr = ASR(model_name=config.WHISPER_MODEL)
 
 pygame.mixer.init()
 
 conversation_history = [{"role": "system", "content": config.SYSTEM_PROMPT}]
-
-
-# ──────────────────────────────────────────────
-# STEP 2 — ASR
-# ──────────────────────────────────────────────
-def transcribe_nepali(audio_np: np.ndarray) -> str:
-    print(".....")
-    result = asr_model.transcribe(audio_np, language="ne")
-    return result["text"].strip()
 
 
 # ──────────────────────────────────────────────
@@ -116,7 +104,7 @@ def run_agent() -> None:
             continue
 
         # 2. Transcribe
-        user_text = transcribe_nepali(audio)
+        user_text = asr.transcribe_nepali(audio)
         if not user_text:
             print("Please Speak again\n")
             continue
