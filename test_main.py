@@ -9,60 +9,20 @@ import os
 import tempfile
 import pygame
 from gtts import gTTS
-from openai import OpenAI
-from dotenv import load_dotenv
 
 import config
 from vad import VAD
 from asr import ASR
-
-# ──────────────────────────────────────────────
-# INIT
-# ──────────────────────────────────────────────
-
-load_dotenv(".env_local")
-api_key = os.getenv("API_KEY")
-if not api_key:
-    raise EnvironmentError("API_KEY not found in .env_local")
-
-client = OpenAI(
-    base_url="https://integrate.api.nvidia.com/v1",
-    api_key=api_key,
-)
-
+from llm import LLM
 
 vad = VAD(threshold=config.VAD_THRESHOLD)
 asr = ASR(model_name=config.WHISPER_MODEL)
-
+llm = LLM(
+    api_key=config.API_KEY, model=config.LLM_MODEL, system_prompt=config.SYSTEM_PROMPT
+)
 pygame.mixer.init()
 
 conversation_history = [{"role": "system", "content": config.SYSTEM_PROMPT}]
-
-
-# ──────────────────────────────────────────────
-# STEP 3 — LLM
-# ──────────────────────────────────────────────
-def get_response(user_text: str) -> str:
-    conversation_history.append({"role": "user", "content": user_text})
-    print("getting response...")
-
-    response = client.chat.completions.create(
-        model=config.LLM_MODEL,
-        messages=conversation_history,
-        temperature=0.7,
-        top_p=1,
-        max_tokens=512,
-        stream=False,
-    )
-
-    assistant_text = response.choices[0].message.content.strip()
-
-    reasoning = getattr(response.choices[0].message, "reasoning_content", None)
-    if reasoning:
-        print(f"\n Reasoning:\n{reasoning}\n")
-
-    conversation_history.append({"role": "assistant", "content": assistant_text})
-    return assistant_text
 
 
 # ──────────────────────────────────────────────
@@ -111,7 +71,7 @@ def run_agent() -> None:
         print(f"You : {user_text}")
 
         # 3. LLM
-        response_text = get_response(user_text)
+        response_text = llm.get_response(user_text)
         print(f"SettleAI: {response_text}\n")
 
         # 4. Speak
