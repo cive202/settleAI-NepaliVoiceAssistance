@@ -9,8 +9,8 @@ Only responsible for:
 
 import pygame
 
-from config import WHISPER_MODEL, VAD_THRESHOLD, LLM_MODEL, API_KEY, SYSTEM_PROMPT
-from asr import ASR
+from config import VAD_THRESHOLD, LLM_MODEL, API_KEY, SYSTEM_PROMPT
+from asr import get_asr
 from vad import VAD
 from llm import LLM
 from tts import TTS
@@ -21,7 +21,7 @@ def main() -> None:
     pygame.mixer.init()
 
     vad = VAD(threshold=VAD_THRESHOLD)
-    asr = ASR(model_name=WHISPER_MODEL)
+    asr = get_asr(type="nvidia")
     llm = LLM(api_key=API_KEY, model=LLM_MODEL, system_prompt=SYSTEM_PROMPT)
     tts = TTS()
 
