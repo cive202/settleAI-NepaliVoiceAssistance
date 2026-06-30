@@ -16,6 +16,13 @@ LLM_BASE_URL = "https://integrate.api.nvidia.com/v1"
 # ── ASR ──────────────────────────────────────
 WHISPER_MODEL = "base"  # tiny | base | small | medium | large
 SAMPLE_RATE = 16000  # Hz — Whisper + Silero both require 16kHz
+ASR_KEY = os.getenv("ASR_KEY")
+# Hosted whisper-large-v3 is only reachable via NVIDIA's gRPC NVCF endpoint
+# (no OpenAI-compatible REST route exists). Re-verify this id on the
+# "View Code" tab of https://build.nvidia.com/openai/whisper-large-v3/api
+# if calls start failing.
+ASR_NVCF_URI = "grpc.nvcf.nvidia.com:443"
+ASR_FUNCTION_ID = "b702f636-f60c-4a3d-a6f4-f3568c13bd7d"
 
 # ── VAD ──────────────────────────────────────
 CHUNK_MS = 32  # ms per VAD chunk (must be 32ms for 16kHz Silero)

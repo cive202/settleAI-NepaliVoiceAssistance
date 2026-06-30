@@ -10,7 +10,10 @@ Endpoints:
 
 import base64
 import io
+import logging
 from contextlib import asynccontextmanager
+
+logging.basicConfig(level=logging.DEBUG)
 
 import numpy as np
 import soundfile as sf
@@ -18,12 +21,18 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from asr import ASR
-from config import API_KEY, LLM_MODEL, SAMPLE_RATE, SYSTEM_PROMPT, WHISPER_MODEL
+from asr import get_asr
+from asr.base import ASRBackend
+from config import (
+    API_KEY,
+    LLM_MODEL,
+    SAMPLE_RATE,
+    SYSTEM_PROMPT,
+)
 from llm import LLM
 from tts import GTTSEngine
 
-_asr: ASR | None = None
+_asr: ASRBackend | None = None
 _llm: LLM | None = None
 _tts: GTTSEngine | None = None
 
@@ -32,8 +41,8 @@ _tts: GTTSEngine | None = None
 async def lifespan(app: FastAPI):
     global _asr, _llm, _tts
     print("Loading models…")
-    _asr = ASR(model_name=WHISPER_MODEL)
-    _llm = LLM(api_key=API_KEY, model=LLM_MODEL, system_prompt=SYSTEM_PROMPT)
+    _asr = get_asr(type="nvidia")
+    _llm = LLM(api_key=API_KEY or "", model=LLM_MODEL, system_prompt=SYSTEM_PROMPT)
     _tts = GTTSEngine(lang="ne")
     print("All models ready.")
     yield
@@ -79,7 +88,11 @@ async def process_audio(audio: UploadFile = File(...)):
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Could not decode audio: {exc}")
 
-    text = _asr.transcribe(audio_np)
+    assert _asr and _llm and _tts
+    try:
+        text = _asr.transcribe(audio_np)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"ASR error: {exc}")
     if not text:
         raise HTTPException(
             status_code=422, detail="Nothing transcribed — please try again"
@@ -97,6 +110,7 @@ async def process_audio(audio: UploadFile = File(...)):
 
 @app.post("/api/text")
 async def process_text(body: TextBody):
+    assert _llm and _tts
     reply = _llm.get_response(body.text)
     tts_bytes = _tts.synthesize(reply)
     return {
@@ -108,5 +122,6 @@ async def process_text(body: TextBody):
 
 @app.post("/api/reset")
 def reset():
+    assert _llm
     _llm.reset_history()
     return {"status": "ok"}
