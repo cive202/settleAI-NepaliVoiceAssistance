@@ -10,12 +10,20 @@ export default function LandingPage() {
           <div className="w-7 h-7 rounded-full bg-cyan-500 shadow-[0_0_14px_rgba(6,182,212,0.6)]" />
           <span className="font-semibold tracking-tight">SettleAI</span>
         </div>
-        <Link
-          href="/chat"
-          className="text-sm text-white/50 hover:text-white transition-colors"
-        >
-          Open App →
-        </Link>
+        <div className="flex items-center gap-5">
+          <Link
+            href="/kec-demo"
+            className="text-sm text-white/50 hover:text-white transition-colors"
+          >
+            Widget Demo
+          </Link>
+          <Link
+            href="/chat"
+            className="text-sm text-white/50 hover:text-white transition-colors"
+          >
+            Open App →
+          </Link>
+        </div>
       </header>
 
       {/* Hero */}
