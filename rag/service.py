@@ -4,9 +4,11 @@ together into a single RAG ingest/query interface.
 """
 
 import re
+import uuid
 
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
 from langchain_classic.chains.retrieval import create_retrieval_chain
+from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import ChatOllama
 
@@ -57,6 +59,23 @@ class RAGService:
             "pages_scraped": len(raw_docs),
             "chunks_indexed": len(ids),
         }
+
+    def add_qa(self, question: str, answer: str) -> dict:
+        """Store a hand-written question/answer pair as its own retrievable page.
+
+        Bypasses scraping entirely — useful for facts that aren't on the
+        source website, or to correct/supplement what scraping found. The
+        pair gets a synthetic "source" so retrieve_context() (which groups
+        chunks by source and reassembles the full page) treats it exactly
+        like a scraped page.
+        """
+        source = f"manual-qa:{uuid.uuid4().hex}"
+        doc = Document(
+            page_content=f"Q: {question}\nA: {answer}",
+            metadata={"source": source, "start_index": 0},
+        )
+        ids = self._store.add_documents([doc])
+        return {"question": question, "answer": answer, "source": source, "id": ids[0]}
 
     def query(self, question: str) -> dict:
         """Answer `question` using only previously ingested context."""
