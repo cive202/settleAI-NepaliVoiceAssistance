@@ -6,6 +6,7 @@ Endpoints:
   POST /api/text        text body  → {user_text, assistant_text, tts_audio}
   POST /api/reset       clear conversation history
   POST /api/rag/ingest  url → scrape, chunk, embed, store in Chroma
+  POST /api/rag/qa      question + answer → store as a hand-written page in Chroma
   POST /api/rag/query   question → answer grounded in ingested context
   GET  /api/health      readiness check
 
@@ -129,6 +130,11 @@ class QueryBody(BaseModel):
     question: str
 
 
+class QABody(BaseModel):
+    question: str
+    answer: str
+
+
 @app.get("/api/health")
 def health():
     return {"status": "ok", "ready": _asr is not None}
@@ -200,4 +206,14 @@ async def rag_query(body: QueryBody):
         result = await asyncio.to_thread(_rag.query, body.question)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Query error: {exc}")
+    return result
+
+
+@app.post("/api/rag/qa")
+async def rag_add_qa(body: QABody):
+    assert _rag
+    try:
+        result = await asyncio.to_thread(_rag.add_qa, body.question, body.answer)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Add QA error: {exc}")
     return result

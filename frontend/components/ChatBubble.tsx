@@ -1,3 +1,5 @@
+import { FormattedText } from "./FormattedText";
+
 export interface Message {
   id: string;
   role: "user" | "assistant";
@@ -22,7 +24,7 @@ export function ChatBubble({ message }: { message: Message }) {
             : "bg-cyan-500/15 border border-cyan-500/20 rounded-bl-sm",
         ].join(" ")}
       >
-        {message.text}
+        <FormattedText text={message.text} />
       </div>
     </div>
   );
