@@ -36,7 +36,38 @@ POST_SPEECH_PADDING_MS = 400  # ms of silence appended after speech ends
 
 # ── LLM ──────────────────────────────────────
 LLM_TEMPERATURE = 0.7
-LLM_MAX_TOKENS = 512
+LLM_MAX_TOKENS = 768
 
-SYSTEM_PROMPT = "तपाईं SettleAI नामक एक सहायक हुनुहुन्छ। सधैं नेपालीमा छोटो र स्पष्ट जवाफ दिनुहोस्।"
-# "You are an assistant called SettleAI. Always reply in Nepali, briefly and clearly."
+SYSTEM_PROMPT = (
+    "तपाईं SettleAI नामक एक सहायक हुनुहुन्छ। सधैं नेपालीमा छोटो र स्पष्ट जवाफ दिनुहोस्। "
+    "तपाईंको जवाफ आवाजमा बोलिने भएकोले मार्कडाउन (तालिका, बोल्ड, बुलेट चिन्ह) प्रयोग नगर्नुहोस् "
+    "— सामान्य बोलिने वाक्यहरूमा मात्र जवाफ दिनुहोस्।"
+)
+# "You are an assistant called SettleAI. Always reply in Nepali, briefly and clearly.
+#  Your reply is spoken aloud, so don't use markdown (tables, bold, bullets) —
+#  answer only in plain spoken sentences."
+
+# ── RAG ──────────────────────────────────────
+RAG_OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+RAG_EMBED_MODEL = "nomic-embed-text"  # run: ollama pull nomic-embed-text
+RAG_CHAT_MODEL = "llama3.1"  # run: ollama pull llama3.1
+RAG_PERSIST_DIR = "chroma_db"  # on-disk Chroma persistence directory
+RAG_COLLECTION_NAME = "rag_docs"
+RAG_CHUNK_SIZE = 1000
+RAG_CHUNK_OVERLAP = 150
+RAG_MAX_DEPTH = 2  # default recursive crawl depth
+RAG_MAX_PAGES = 60  # safety cap on pages per ingest (JS rendering is slow)
+RAG_RETRIEVER_K = 12  # top-k chunks retrieved per query
+RAG_MAX_CONTEXT_PAGES = 5  # cap on distinct pages fully expanded into context
+
+# Best-match relevance score (0-1) from similarity_search_with_relevance_scores
+# decides how to handle a query:
+#   score < RAG_LOW_CONFIDENCE  -> confidently out-of-scope, decline normally
+#   RAG_LOW_CONFIDENCE..RAG_CONFIDENT -> likely garbled/unclear, ask to repeat
+#   score >= RAG_CONFIDENT      -> proceed with full retrieval as normal
+# Calibrated against observed scores: a clear out-of-scope question ("capital
+# of France") scored ~0.18-0.22; a heavily garbled but on-topic ASR query
+# scored ~0.37-0.38; clean on-topic queries scored 0.51+.
+RAG_LOW_CONFIDENCE = 0.25
+RAG_CONFIDENT = 0.45
+RAG_LLM_TEMPERATURE = 0.0  # factual RAG answers
