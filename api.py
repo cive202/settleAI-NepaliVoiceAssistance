@@ -2,15 +2,24 @@
 api.py — FastAPI HTTP server wrapping the SettleAI voice pipeline.
 
 Endpoints:
-  POST /api/process  audio file → {user_text, assistant_text, tts_audio}
-  POST /api/text     text body  → {user_text, assistant_text, tts_audio}
-  POST /api/reset    clear conversation history
-  GET  /api/health   readiness check
+  POST /api/process     audio file → {user_text, assistant_text, tts_audio}
+  POST /api/text        text body  → {user_text, assistant_text, tts_audio}
+  POST /api/reset       clear conversation history
+  POST /api/rag/ingest  url → scrape, chunk, embed, store in Chroma
+  POST /api/rag/query   question → answer grounded in ingested context
+  GET  /api/health      readiness check
+
+/api/process and /api/text reply directly (no retrieval) to short greetings/
+small talk; any other message is answered strictly from content retrieved
+via the Chroma vector store ingested through /api/rag/ingest, declining if
+the answer isn't in the ingested knowledge base.
 """
 
+import asyncio
 import base64
 import io
 import logging
+import re
 from contextlib import asynccontextmanager
 
 logging.basicConfig(level=logging.DEBUG)
@@ -26,24 +35,28 @@ from asr.base import ASRBackend
 from config import (
     API_KEY,
     LLM_MODEL,
+    RAG_MAX_DEPTH,
     SAMPLE_RATE,
     SYSTEM_PROMPT,
 )
 from llm import LLM
+from rag import RAGService
 from tts import GTTSEngine
 
 _asr: ASRBackend | None = None
 _llm: LLM | None = None
 _tts: GTTSEngine | None = None
+_rag: RAGService | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _asr, _llm, _tts
+    global _asr, _llm, _tts, _rag
     print("Loading models…")
     _asr = get_asr(type="nvidia")
     _llm = LLM(api_key=API_KEY or "", model=LLM_MODEL, system_prompt=SYSTEM_PROMPT)
     _tts = GTTSEngine(lang="ne")
+    _rag = RAGService()
     print("All models ready.")
     yield
 
@@ -57,6 +70,38 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+_GREETING_PHRASES = {
+    "hi", "hii", "hello", "hey", "heya", "yo",
+    "good morning", "good afternoon", "good evening", "good night",
+    "how are you", "whats up", "what's up", "sup",
+    "namaste", "namaskar",
+    "नमस्ते", "नमस्कार", "के छ", "कस्तो छ", "हजुर",
+}
+
+
+def _is_greeting(text: str) -> bool:
+    """True only when the whole message is a short greeting/small-talk phrase."""
+    normalized = re.sub(r"[^\w\sऀ-ॿ]", "", text.strip().lower())
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+    return normalized in _GREETING_PHRASES
+
+
+def _generate_reply(user_text: str) -> str:
+    assert _llm and _rag
+    if _is_greeting(user_text):
+        return _llm.get_response(user_text)
+
+    # Follow-ups ("since when does it exist?") carry no topic on their own —
+    # fold in the prior turn so retrieval has something to match against.
+    prior_turn = _llm.last_user_message()
+    retrieval_query = f"{prior_turn} {user_text}" if prior_turn else user_text
+
+    context, _sources = _rag.retrieve_context(retrieval_query)
+    if context is None:
+        return _llm.get_response(user_text, clarify=True)
+    return _llm.get_response(user_text, context=context)
 
 
 def _load_audio(raw: bytes) -> np.ndarray:
@@ -75,6 +120,15 @@ class TextBody(BaseModel):
     text: str
 
 
+class IngestBody(BaseModel):
+    url: str
+    max_depth: int | None = None
+
+
+class QueryBody(BaseModel):
+    question: str
+
+
 @app.get("/api/health")
 def health():
     return {"status": "ok", "ready": _asr is not None}
@@ -88,7 +142,7 @@ async def process_audio(audio: UploadFile = File(...)):
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Could not decode audio: {exc}")
 
-    assert _asr and _llm and _tts
+    assert _asr and _llm and _tts and _rag
     try:
         text = _asr.transcribe(audio_np)
     except Exception as exc:
@@ -98,7 +152,7 @@ async def process_audio(audio: UploadFile = File(...)):
             status_code=422, detail="Nothing transcribed — please try again"
         )
 
-    reply = _llm.get_response(text)
+    reply = _generate_reply(text)
     tts_bytes = _tts.synthesize(reply)
 
     return {
@@ -110,8 +164,8 @@ async def process_audio(audio: UploadFile = File(...)):
 
 @app.post("/api/text")
 async def process_text(body: TextBody):
-    assert _llm and _tts
-    reply = _llm.get_response(body.text)
+    assert _llm and _tts and _rag
+    reply = _generate_reply(body.text)
     tts_bytes = _tts.synthesize(reply)
     return {
         "user_text": body.text,
@@ -125,3 +179,25 @@ def reset():
     assert _llm
     _llm.reset_history()
     return {"status": "ok"}
+
+
+@app.post("/api/rag/ingest")
+async def rag_ingest(body: IngestBody):
+    assert _rag
+    try:
+        result = await asyncio.to_thread(
+            _rag.ingest, body.url, body.max_depth or RAG_MAX_DEPTH
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Ingest error: {exc}")
+    return result
+
+
+@app.post("/api/rag/query")
+async def rag_query(body: QueryBody):
+    assert _rag
+    try:
+        result = await asyncio.to_thread(_rag.query, body.question)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Query error: {exc}")
+    return result
