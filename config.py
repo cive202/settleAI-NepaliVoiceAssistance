@@ -23,6 +23,7 @@ ASR_KEY = os.getenv("ASR_KEY")
 # if calls start failing.
 ASR_NVCF_URI = "grpc.nvcf.nvidia.com:443"
 ASR_FUNCTION_ID = "b702f636-f60c-4a3d-a6f4-f3568c13bd7d"
+ASR_TIMEOUT_S = 15  # bound worst-case latency if the gRPC endpoint stalls
 
 # ── VAD ──────────────────────────────────────
 CHUNK_MS = 32  # ms per VAD chunk (must be 32ms for 16kHz Silero)
@@ -37,6 +38,8 @@ POST_SPEECH_PADDING_MS = 400  # ms of silence appended after speech ends
 # ── LLM ──────────────────────────────────────
 LLM_TEMPERATURE = 0.7
 LLM_MAX_TOKENS = 768
+LLM_MAX_HISTORY_TURNS = 8  # user+assistant pairs kept, beyond which older turns are dropped
+LLM_TIMEOUT_S = 20  # bound worst-case latency if the NVIDIA endpoint stalls
 
 SYSTEM_PROMPT = (
     "तपाईं SettleAI नामक एक सहायक हुनुहुन्छ। सधैं नेपालीमा छोटो र स्पष्ट जवाफ दिनुहोस्। "
@@ -49,6 +52,7 @@ SYSTEM_PROMPT = (
 
 # ── RAG ──────────────────────────────────────
 RAG_OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+RAG_OLLAMA_TIMEOUT_S = 20  # bound worst-case latency if the local Ollama daemon stalls
 RAG_EMBED_MODEL = "nomic-embed-text"  # run: ollama pull nomic-embed-text
 RAG_CHAT_MODEL = "llama3.1"  # run: ollama pull llama3.1
 RAG_PERSIST_DIR = "chroma_db"  # on-disk Chroma persistence directory
@@ -71,3 +75,6 @@ RAG_MAX_CONTEXT_PAGES = 5  # cap on distinct pages fully expanded into context
 RAG_LOW_CONFIDENCE = 0.25
 RAG_CONFIDENT = 0.45
 RAG_LLM_TEMPERATURE = 0.0  # factual RAG answers
+
+# ── TTS ──────────────────────────────────────
+TTS_TIMEOUT_S = 15  # bound worst-case latency if Google's TTS endpoint stalls

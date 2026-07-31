@@ -9,12 +9,17 @@ from config import (
     RAG_COLLECTION_NAME,
     RAG_EMBED_MODEL,
     RAG_OLLAMA_BASE_URL,
+    RAG_OLLAMA_TIMEOUT_S,
     RAG_PERSIST_DIR,
 )
 
 
 def get_embeddings() -> OllamaEmbeddings:
-    return OllamaEmbeddings(model=RAG_EMBED_MODEL, base_url=RAG_OLLAMA_BASE_URL)
+    return OllamaEmbeddings(
+        model=RAG_EMBED_MODEL,
+        base_url=RAG_OLLAMA_BASE_URL,
+        client_kwargs={"timeout": RAG_OLLAMA_TIMEOUT_S},
+    )
 
 
 def get_vectorstore(embeddings: OllamaEmbeddings | None = None) -> Chroma:

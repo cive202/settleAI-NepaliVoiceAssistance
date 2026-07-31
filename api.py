@@ -177,7 +177,7 @@ async def process_audio(audio: UploadFile = File(...)):
         raw = await audio.read()
         try:
             with timed("load_audio"):
-                audio_np = _load_audio(raw)
+                audio_np = await asyncio.to_thread(_load_audio, raw)
         except Exception as exc:
             raise HTTPException(
                 status_code=400, detail=f"Could not decode audio: {exc}"
@@ -186,7 +186,7 @@ async def process_audio(audio: UploadFile = File(...)):
         assert _asr and _llm and _tts and _rag
         try:
             with timed("asr.transcribe"):
-                text = _asr.transcribe(audio_np)
+                text = await asyncio.to_thread(_asr.transcribe, audio_np)
         except Exception as exc:
             raise HTTPException(status_code=500, detail=f"ASR error: {exc}")
         if not text:
@@ -194,9 +194,9 @@ async def process_audio(audio: UploadFile = File(...)):
                 status_code=422, detail="Nothing transcribed — please try again"
             )
 
-        reply = _generate_reply(text)
+        reply = await asyncio.to_thread(_generate_reply, text)
         with timed("tts.synthesize"):
-            tts_bytes = _tts.synthesize(reply)
+            tts_bytes = await asyncio.to_thread(_tts.synthesize, reply)
 
     return {
         "user_text": text,
@@ -209,9 +209,9 @@ async def process_audio(audio: UploadFile = File(...)):
 async def process_text(body: TextBody):
     assert _llm and _tts and _rag
     with timed("process_text.total"):
-        reply = _generate_reply(body.text)
+        reply = await asyncio.to_thread(_generate_reply, body.text)
         with timed("tts.synthesize"):
-            tts_bytes = _tts.synthesize(reply)
+            tts_bytes = await asyncio.to_thread(_tts.synthesize, reply)
     return {
         "user_text": body.text,
         "assistant_text": reply,

@@ -19,6 +19,7 @@ from config import (
     RAG_LOW_CONFIDENCE,
     RAG_MAX_CONTEXT_PAGES,
     RAG_OLLAMA_BASE_URL,
+    RAG_OLLAMA_TIMEOUT_S,
     RAG_RETRIEVER_K,
 )
 from perf import timed
@@ -43,6 +44,7 @@ class RAGService:
             model=RAG_CHAT_MODEL,
             base_url=RAG_OLLAMA_BASE_URL,
             temperature=RAG_LLM_TEMPERATURE,
+            client_kwargs={"timeout": RAG_OLLAMA_TIMEOUT_S},
         )
         self._retriever = self._store.as_retriever(search_kwargs={"k": RAG_RETRIEVER_K})
         combine_docs_chain = create_stuff_documents_chain(self._llm, _RAG_PROMPT)
@@ -131,13 +133,18 @@ class RAGService:
                 sources.append(source)
         sources = sources[:RAG_MAX_CONTEXT_PAGES]
 
-        page_texts = []
         with timed("rag.fetch_pages"):
+            result = self._store.get(
+                where={"source": {"$in": sources}}, include=["documents", "metadatas"]
+            )
+            chunks_by_source: dict[str, list[tuple[str, dict]]] = {s: [] for s in sources}
+            for text, metadata in zip(result["documents"], result["metadatas"]):
+                chunks_by_source[metadata.get("source", "")].append((text, metadata))
+
+            page_texts = []
             for source in sources:
-                result = self._store.get(where={"source": source}, include=["documents", "metadatas"])
                 ordered = sorted(
-                    zip(result["documents"], result["metadatas"]),
-                    key=lambda pair: pair[1].get("start_index", 0),
+                    chunks_by_source[source], key=lambda pair: pair[1].get("start_index", 0)
                 )
                 page_texts.append("\n".join(text for text, _ in ordered))
 

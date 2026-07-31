@@ -12,9 +12,11 @@ from openai import OpenAI
 from config import (
     API_KEY,
     LLM_BASE_URL,
+    LLM_MAX_HISTORY_TURNS,
     LLM_MAX_TOKENS,
     LLM_MODEL,
     LLM_TEMPERATURE,
+    LLM_TIMEOUT_S,
     SYSTEM_PROMPT,
 )
 from perf import timed
@@ -31,7 +33,7 @@ class LLM:
         if not api_key:
             raise EnvironmentError("API_KEY not found — check your .env_local file.")
 
-        self._client = OpenAI(base_url=base_url, api_key=api_key)
+        self._client = OpenAI(base_url=base_url, api_key=api_key, timeout=LLM_TIMEOUT_S)
         self._model = model
 
         self._history = [{"role": "system", "content": system_prompt}]
@@ -96,7 +98,19 @@ class LLM:
             print(f"\n Reasoning:\n{reasoning}\n")
 
         self._history.append({"role": "assistant", "content": assistant_text})
+        self._trim_history()
         return assistant_text
+
+    def _trim_history(self) -> None:
+        """Keep the system prompt plus the last LLM_MAX_HISTORY_TURNS user/assistant pairs.
+
+        Unbounded history means prompt size — and therefore request latency —
+        grows every turn for the life of a session.
+        """
+        turns = self._history[1:]
+        max_messages = LLM_MAX_HISTORY_TURNS * 2
+        if len(turns) > max_messages:
+            self._history = [self._history[0]] + turns[-max_messages:]
 
     def reset_history(self) -> None:
         """Clears conversation history but keeps the system prompt."""

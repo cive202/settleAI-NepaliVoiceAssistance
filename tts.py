@@ -17,10 +17,12 @@ import io
 import os
 import tempfile
 from abc import ABC, abstractmethod
+from functools import lru_cache
 
 import pygame
 from gtts import gTTS
 
+from config import TTS_TIMEOUT_S
 from perf import timed
 
 
@@ -36,6 +38,14 @@ class TTSEngine(ABC):
         pass
 
 
+# Repeated replies (greetings especially) shouldn't re-hit Google's TTS endpoint.
+@lru_cache(maxsize=128)
+def _synthesize_gtts(text: str, lang: str) -> bytes:
+    buf = io.BytesIO()
+    gTTS(text=text, lang=lang, timeout=TTS_TIMEOUT_S).write_to_fp(buf)
+    return buf.getvalue()
+
+
 # ── gTTS implementation (current) ────────────────────────────────────────────
 class GTTSEngine(TTSEngine):
     def __init__(self, lang: str = "ne"):
@@ -43,9 +53,7 @@ class GTTSEngine(TTSEngine):
 
     def synthesize(self, text: str) -> bytes:
         with timed("tts.gtts_synthesize"):
-            buf = io.BytesIO()
-            gTTS(text=text, lang=self.lang).write_to_fp(buf)
-            return buf.getvalue()
+            return _synthesize_gtts(text, self.lang)
 
     def speak(self, text: str) -> None:
         with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
