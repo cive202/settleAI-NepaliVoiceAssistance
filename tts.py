@@ -21,6 +21,8 @@ from abc import ABC, abstractmethod
 import pygame
 from gtts import gTTS
 
+from perf import timed
+
 
 class TTSEngine(ABC):
     @abstractmethod
@@ -40,9 +42,10 @@ class GTTSEngine(TTSEngine):
         self.lang = lang
 
     def synthesize(self, text: str) -> bytes:
-        buf = io.BytesIO()
-        gTTS(text=text, lang=self.lang).write_to_fp(buf)
-        return buf.getvalue()
+        with timed("tts.gtts_synthesize"):
+            buf = io.BytesIO()
+            gTTS(text=text, lang=self.lang).write_to_fp(buf)
+            return buf.getvalue()
 
     def speak(self, text: str) -> None:
         with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:

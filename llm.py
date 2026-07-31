@@ -17,6 +17,7 @@ from config import (
     LLM_TEMPERATURE,
     SYSTEM_PROMPT,
 )
+from perf import timed
 
 
 class LLM:
@@ -77,15 +78,15 @@ class LLM:
         else:
             api_messages = self._history
 
-        print("Getting response...")
-        response = self._client.chat.completions.create(
-            model=self._model,
-            messages=api_messages,
-            temperature=LLM_TEMPERATURE,
-            top_p=1,
-            max_tokens=LLM_MAX_TOKENS,
-            stream=False,
-        )
+        with timed("llm.chat_completion"):
+            response = self._client.chat.completions.create(
+                model=self._model,
+                messages=api_messages,
+                temperature=LLM_TEMPERATURE,
+                top_p=1,
+                max_tokens=LLM_MAX_TOKENS,
+                stream=False,
+            )
 
         assistant_text = response.choices[0].message.content.strip()
 

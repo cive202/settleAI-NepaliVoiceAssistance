@@ -3,6 +3,7 @@ import numpy as np
 import riva.client
 from .base import ASRBackend
 from config import ASR_KEY, ASR_NVCF_URI, ASR_FUNCTION_ID, SAMPLE_RATE
+from perf import timed
 
 log = logging.getLogger(__name__)
 
@@ -30,7 +31,8 @@ class WhisperNvidiaASR(ASRBackend):
     def transcribe(self, audio_np: np.ndarray) -> str:
         log.debug("Transcribing %.2fs of audio (nvidia)", len(audio_np) / SAMPLE_RATE)
         audio_bytes = (audio_np * 32767).astype(np.int16).tobytes()
-        response = self._service.offline_recognize(audio_bytes, self._config, future=False)
+        with timed("asr.nvidia_recognize"):
+            response = self._service.offline_recognize(audio_bytes, self._config, future=False)
         text = "".join(r.alternatives[0].transcript for r in response.results).strip()
         log.debug("Transcription: %r", text)
         return text

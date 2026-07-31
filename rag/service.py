@@ -21,6 +21,8 @@ from config import (
     RAG_OLLAMA_BASE_URL,
     RAG_RETRIEVER_K,
 )
+from perf import timed
+
 from .scraper import scrape, split
 from .store import get_embeddings, get_vectorstore
 
@@ -48,11 +50,14 @@ class RAGService:
 
     def ingest(self, url: str, max_depth: int) -> dict:
         """Scrape, chunk, embed, and store the pages found at `url`."""
-        raw_docs = scrape(url, max_depth=max_depth)
+        with timed("rag.scrape"):
+            raw_docs = scrape(url, max_depth=max_depth)
         if not raw_docs:
             raise ValueError(f"No pages found at {url} (max_depth={max_depth})")
-        chunks = split(raw_docs)
-        ids = self._store.add_documents(chunks)
+        with timed("rag.split"):
+            chunks = split(raw_docs)
+        with timed("rag.embed_and_store"):
+            ids = self._store.add_documents(chunks)
         return {
             "url": url,
             "max_depth": max_depth,
@@ -79,7 +84,8 @@ class RAGService:
 
     def query(self, question: str) -> dict:
         """Answer `question` using only previously ingested context."""
-        result = self._chain.invoke({"input": question})
+        with timed("rag.chain_invoke"):
+            result = self._chain.invoke({"input": question})
         sources = sorted({d.metadata.get("source", "") for d in result.get("context", [])})
         return {"answer": result["answer"], "sources": sources}
 
@@ -105,10 +111,12 @@ class RAGService:
         order) — the LLM sees whole pages instead of a partial slice of one, while
         the page cap keeps the prompt from ballooning when many pages match.
         """
-        search_query = self._translate_to_english(question)
-        scored = self._store.similarity_search_with_relevance_scores(
-            search_query, k=RAG_RETRIEVER_K
-        )
+        with timed("rag.translate"):
+            search_query = self._translate_to_english(question)
+        with timed("rag.similarity_search"):
+            scored = self._store.similarity_search_with_relevance_scores(
+                search_query, k=RAG_RETRIEVER_K
+            )
         if not scored:
             return "", []
 
@@ -124,13 +132,14 @@ class RAGService:
         sources = sources[:RAG_MAX_CONTEXT_PAGES]
 
         page_texts = []
-        for source in sources:
-            result = self._store.get(where={"source": source}, include=["documents", "metadatas"])
-            ordered = sorted(
-                zip(result["documents"], result["metadatas"]),
-                key=lambda pair: pair[1].get("start_index", 0),
-            )
-            page_texts.append("\n".join(text for text, _ in ordered))
+        with timed("rag.fetch_pages"):
+            for source in sources:
+                result = self._store.get(where={"source": source}, include=["documents", "metadatas"])
+                ordered = sorted(
+                    zip(result["documents"], result["metadatas"]),
+                    key=lambda pair: pair[1].get("start_index", 0),
+                )
+                page_texts.append("\n".join(text for text, _ in ordered))
 
         return "\n\n".join(page_texts), sources
 

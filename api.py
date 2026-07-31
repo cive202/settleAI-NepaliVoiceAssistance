@@ -20,10 +20,20 @@ import asyncio
 import base64
 import io
 import logging
+import os
 import re
 from contextlib import asynccontextmanager
+from logging.handlers import RotatingFileHandler
 
-logging.basicConfig(level=logging.DEBUG)
+os.makedirs("logs", exist_ok=True)
+_log_formatter = logging.Formatter("%(asctime)s %(levelname)-7s %(name)s: %(message)s")
+_file_handler = RotatingFileHandler("logs/app.log", maxBytes=5_000_000, backupCount=3)
+_file_handler.setFormatter(_log_formatter)
+_console_handler = logging.StreamHandler()
+_console_handler.setFormatter(_log_formatter)
+logging.basicConfig(level=logging.DEBUG, handlers=[_file_handler, _console_handler])
+
+log = logging.getLogger(__name__)
 
 import numpy as np
 import soundfile as sf
@@ -41,6 +51,7 @@ from config import (
     SYSTEM_PROMPT,
 )
 from llm import LLM
+from perf import timed
 from rag import RAGService
 from tts import GTTSEngine
 
@@ -74,11 +85,27 @@ app.add_middleware(
 
 
 _GREETING_PHRASES = {
-    "hi", "hii", "hello", "hey", "heya", "yo",
-    "good morning", "good afternoon", "good evening", "good night",
-    "how are you", "whats up", "what's up", "sup",
-    "namaste", "namaskar",
-    "नमस्ते", "नमस्कार", "के छ", "कस्तो छ", "हजुर",
+    "hi",
+    "hii",
+    "hello",
+    "hey",
+    "heya",
+    "yo",
+    "good morning",
+    "good afternoon",
+    "good evening",
+    "good night",
+    "how are you",
+    "whats up",
+    "what's up",
+    "sup",
+    "namaste",
+    "namaskar",
+    "नमस्ते",
+    "नमस्कार",
+    "के छ",
+    "कस्तो छ",
+    "हजुर",
 }
 
 
@@ -92,17 +119,21 @@ def _is_greeting(text: str) -> bool:
 def _generate_reply(user_text: str) -> str:
     assert _llm and _rag
     if _is_greeting(user_text):
-        return _llm.get_response(user_text)
+        with timed("llm.greeting"):
+            return _llm.get_response(user_text)
 
     # Follow-ups ("since when does it exist?") carry no topic on their own —
     # fold in the prior turn so retrieval has something to match against.
     prior_turn = _llm.last_user_message()
     retrieval_query = f"{prior_turn} {user_text}" if prior_turn else user_text
 
-    context, _sources = _rag.retrieve_context(retrieval_query)
+    with timed("rag.retrieve_context"):
+        context, _sources = _rag.retrieve_context(retrieval_query)
     if context is None:
-        return _llm.get_response(user_text, clarify=True)
-    return _llm.get_response(user_text, context=context)
+        with timed("llm.clarify"):
+            return _llm.get_response(user_text, clarify=True)
+    with timed("llm.answer"):
+        return _llm.get_response(user_text, context=context)
 
 
 def _load_audio(raw: bytes) -> np.ndarray:
@@ -142,24 +173,30 @@ def health():
 
 @app.post("/api/process")
 async def process_audio(audio: UploadFile = File(...)):
-    raw = await audio.read()
-    try:
-        audio_np = _load_audio(raw)
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"Could not decode audio: {exc}")
+    with timed("process_audio.total"):
+        raw = await audio.read()
+        try:
+            with timed("load_audio"):
+                audio_np = _load_audio(raw)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=400, detail=f"Could not decode audio: {exc}"
+            )
 
-    assert _asr and _llm and _tts and _rag
-    try:
-        text = _asr.transcribe(audio_np)
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"ASR error: {exc}")
-    if not text:
-        raise HTTPException(
-            status_code=422, detail="Nothing transcribed — please try again"
-        )
+        assert _asr and _llm and _tts and _rag
+        try:
+            with timed("asr.transcribe"):
+                text = _asr.transcribe(audio_np)
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"ASR error: {exc}")
+        if not text:
+            raise HTTPException(
+                status_code=422, detail="Nothing transcribed — please try again"
+            )
 
-    reply = _generate_reply(text)
-    tts_bytes = _tts.synthesize(reply)
+        reply = _generate_reply(text)
+        with timed("tts.synthesize"):
+            tts_bytes = _tts.synthesize(reply)
 
     return {
         "user_text": text,
@@ -171,8 +208,10 @@ async def process_audio(audio: UploadFile = File(...)):
 @app.post("/api/text")
 async def process_text(body: TextBody):
     assert _llm and _tts and _rag
-    reply = _generate_reply(body.text)
-    tts_bytes = _tts.synthesize(reply)
+    with timed("process_text.total"):
+        reply = _generate_reply(body.text)
+        with timed("tts.synthesize"):
+            tts_bytes = _tts.synthesize(reply)
     return {
         "user_text": body.text,
         "assistant_text": reply,
@@ -191,9 +230,10 @@ def reset():
 async def rag_ingest(body: IngestBody):
     assert _rag
     try:
-        result = await asyncio.to_thread(
-            _rag.ingest, body.url, body.max_depth or RAG_MAX_DEPTH
-        )
+        with timed("rag_ingest.total"):
+            result = await asyncio.to_thread(
+                _rag.ingest, body.url, body.max_depth or RAG_MAX_DEPTH
+            )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Ingest error: {exc}")
     return result
