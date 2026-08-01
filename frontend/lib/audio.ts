@@ -13,8 +13,8 @@ export class AudioRecorder {
     return this.stream !== null;
   }
 
-  async start(onVolume?: VolumeCallback): Promise<void> {
-    this.chunks = [];
+  async start(onVolume?: VolumeCallback, seedChunks?: Float32Array[]): Promise<void> {
+    this.chunks = seedChunks ? [...seedChunks] : [];
     this.stream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 },
     });

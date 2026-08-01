@@ -1,30 +1,64 @@
-export interface ProcessResult {
-  user_text: string;
-  assistant_text: string;
-  tts_audio: string; // base64-encoded MP3
+export interface TranscriptEvent {
+  type: "transcript";
+  text: string;
 }
+
+export interface SentenceEvent {
+  type: "sentence";
+  text: string;
+  audio: string; // base64-encoded MP3
+}
+
+export interface DoneEvent {
+  type: "done";
+  assistant_text: string;
+}
+
+export type StreamEvent = TranscriptEvent | SentenceEvent | DoneEvent;
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+export const WS_API = API.replace(/^http/, "ws");
 
-export async function processAudio(blob: Blob): Promise<ProcessResult> {
-  const form = new FormData();
-  form.append("audio", blob, "recording.wav");
-  const res = await fetch(`${API}/api/process`, { method: "POST", body: form });
-  if (!res.ok) {
+async function* readNdjson(res: Response): AsyncGenerator<StreamEvent> {
+  if (!res.ok || !res.body) {
     const err = await res.json().catch(() => ({}));
-    throw new Error((err as { detail?: string }).detail ?? "Processing failed");
+    throw new Error((err as { detail?: string }).detail ?? "Request failed");
   }
-  return res.json();
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let newlineIdx: number;
+    while ((newlineIdx = buffer.indexOf("\n")) >= 0) {
+      const line = buffer.slice(0, newlineIdx).trim();
+      buffer = buffer.slice(newlineIdx + 1);
+      if (line) yield JSON.parse(line) as StreamEvent;
+    }
+  }
+  const tail = buffer.trim();
+  if (tail) yield JSON.parse(tail) as StreamEvent;
 }
 
-export async function sendText(text: string): Promise<ProcessResult> {
+export async function* streamProcessAudio(
+  blob: Blob,
+  signal?: AbortSignal
+): AsyncGenerator<StreamEvent> {
+  const form = new FormData();
+  form.append("audio", blob, "recording.wav");
+  const res = await fetch(`${API}/api/process`, { method: "POST", body: form, signal });
+  yield* readNdjson(res);
+}
+
+export async function* streamText(text: string): AsyncGenerator<StreamEvent> {
   const res = await fetch(`${API}/api/text`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text }),
   });
-  if (!res.ok) throw new Error("Text processing failed");
-  return res.json();
+  yield* readNdjson(res);
 }
 
 export async function resetConversation(): Promise<void> {

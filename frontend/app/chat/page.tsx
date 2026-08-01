@@ -6,7 +6,9 @@ import { RotateCcw } from "lucide-react";
 import { MicButton, type AppState } from "@/components/MicButton";
 import { ChatBubble, type Message } from "@/components/ChatBubble";
 import { AudioRecorder } from "@/lib/audio";
-import { processAudio, resetConversation } from "@/lib/api";
+import { AudioQueue } from "@/lib/audioQueue";
+import { BargeInDetector } from "@/lib/bargeIn";
+import { streamProcessAudio, resetConversation } from "@/lib/api";
 
 const STATUS: Record<AppState, string> = {
   idle: "Tap to speak",
@@ -21,11 +23,28 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [error, setError] = useState<string | null>(null);
   const recorderRef = useRef(new AudioRecorder());
+  const audioQueueRef = useRef(new AudioQueue());
+  const bargeInRef = useRef(new BargeInDetector());
+  const abortControllerRef = useRef<AbortController | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  const handleBargeIn = useCallback(async (preRoll: Float32Array[]) => {
+    bargeInRef.current.stop();
+    audioQueueRef.current.stop();
+    abortControllerRef.current?.abort();
+    setError(null);
+    try {
+      await recorderRef.current.start(setVolume, preRoll);
+      setAppState("recording");
+    } catch {
+      setError("Microphone access denied — check browser permissions");
+      setAppState("idle");
+    }
+  }, []);
 
   const handleMic = useCallback(async () => {
     if (appState === "idle") {
@@ -43,31 +62,63 @@ export default function ChatPage() {
       setAppState("processing");
       try {
         const blob = await recorderRef.current.stop();
-        const result = await processAudio(blob);
         const ts = Date.now();
-        setMessages((prev) => [
-          ...prev,
-          { id: `${ts}-u`, role: "user", text: result.user_text },
-          { id: `${ts}-a`, role: "assistant", text: result.assistant_text },
-        ]);
-        setAppState("speaking");
-        const audio = new Audio(`data:audio/mp3;base64,${result.tts_audio}`);
-        audio.onended = () => {
+        const assistantId = `${ts}-a`;
+        let assistantText = "";
+        let bargeInStarted = false;
+
+        const queue = audioQueueRef.current;
+        queue.onDrained = () => {
+          bargeInRef.current.stop();
           setAppState("idle");
           setVolume(0);
         };
-        audio.onerror = () => setAppState("idle");
-        audio.play().catch(() => setAppState("idle"));
+
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        for await (const evt of streamProcessAudio(blob, controller.signal)) {
+          if (evt.type === "transcript") {
+            setMessages((prev) => [
+              ...prev,
+              { id: `${ts}-u`, role: "user", text: evt.text },
+              { id: assistantId, role: "assistant", text: "" },
+            ]);
+          } else if (evt.type === "sentence") {
+            assistantText = assistantText ? `${assistantText} ${evt.text}` : evt.text;
+            const textSoFar = assistantText;
+            setMessages((prev) =>
+              prev.map((m) => (m.id === assistantId ? { ...m, text: textSoFar } : m))
+            );
+            setAppState("speaking");
+            if (!bargeInStarted) {
+              bargeInStarted = true;
+              bargeInRef.current.start(handleBargeIn);
+            }
+            queue.push(evt.audio);
+          } else if (evt.type === "done") {
+            queue.finish();
+          }
+        }
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Something went wrong");
-        setAppState("idle");
+        if (e instanceof DOMException && e.name === "AbortError") {
+          // Cancelled deliberately by a barge-in — handleBargeIn already
+          // moved state to "recording", nothing else to do here.
+        } else {
+          setError(e instanceof Error ? e.message : "Something went wrong");
+          setAppState("idle");
+        }
       }
     }
-  }, [appState]);
+  }, [appState, handleBargeIn]);
 
   const handleReset = useCallback(async () => {
+    audioQueueRef.current.stop();
+    bargeInRef.current.stop();
+    abortControllerRef.current?.abort();
     setMessages([]);
     setError(null);
+    setAppState("idle");
     try {
       await resetConversation();
     } catch {

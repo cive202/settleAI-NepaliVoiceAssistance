@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Mic, MicOff, Send, Volume2, X, Loader2, Sparkles } from "lucide-react";
 import { FormattedText } from "./FormattedText";
 import { AudioRecorder } from "@/lib/audio";
-import { processAudio, sendText } from "@/lib/api";
+import { AudioQueue } from "@/lib/audioQueue";
+import { streamProcessAudio, streamText, type StreamEvent } from "@/lib/api";
 
 type Status = "idle" | "recording" | "processing" | "speaking" | "error";
 
@@ -12,7 +13,7 @@ interface Turn {
   id: string;
   question: string;
   answer: string;
-  audio: string; // base64 mp3
+  audioChunks: string[]; // base64 mp3, one per sentence
 }
 
 const STATUS_LABEL: Record<Status, string> = {
@@ -36,7 +37,7 @@ export function AskWidget() {
   const [error, setError] = useState<string | null>(null);
 
   const recorderRef = useRef(new AudioRecorder());
-  const audioElRef = useRef<HTMLAudioElement | null>(null);
+  const audioQueueRef = useRef(new AudioQueue());
   const scrollRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -61,23 +62,59 @@ export function AskWidget() {
     };
   }, [open]);
 
-  const playAnswer = useCallback((audioB64: string) => {
-    audioElRef.current?.pause();
-    const audio = new Audio(`data:audio/mp3;base64,${audioB64}`);
-    audioElRef.current = audio;
+  const playChunks = useCallback((chunks: string[]) => {
+    const queue = audioQueueRef.current;
+    queue.stop();
+    queue.onDrained = () => setStatus("idle");
+    for (const chunk of chunks) queue.push(chunk);
+    queue.finish();
     setStatus("speaking");
-    audio.onended = () => setStatus("idle");
-    audio.onerror = () => setStatus("idle");
-    audio.play().catch(() => setStatus("idle"));
   }, []);
 
-  const handleResult = useCallback(
-    (question: string, answer: string, audio: string) => {
-      setTurns((prev) => [...prev, { id: `${Date.now()}`, question, answer, audio }]);
-      playAnswer(audio);
-    },
-    [playAnswer]
-  );
+  /** Consumes a reply stream, creating/updating a Turn as sentences arrive
+   * and queuing each sentence's audio for immediate playback. */
+  const runQuery = useCallback(async (knownQuestion: string | null, stream: AsyncGenerator<StreamEvent>) => {
+    const id = `${Date.now()}`;
+    let question = knownQuestion ?? "";
+    let answer = "";
+    const chunks: string[] = [];
+    let turnCreated = false;
+
+    const ensureTurn = () => {
+      if (turnCreated) return;
+      turnCreated = true;
+      setTurns((prev) => [...prev, { id, question, answer: "", audioChunks: [] }]);
+    };
+    if (knownQuestion !== null) ensureTurn();
+
+    const queue = audioQueueRef.current;
+    queue.onDrained = () => setStatus("idle");
+
+    try {
+      for await (const evt of stream) {
+        if (evt.type === "transcript") {
+          question = evt.text;
+          ensureTurn();
+          setTurns((prev) => prev.map((t) => (t.id === id ? { ...t, question } : t)));
+        } else if (evt.type === "sentence") {
+          answer = answer ? `${answer} ${evt.text}` : evt.text;
+          chunks.push(evt.audio);
+          const textSoFar = answer;
+          const chunksSoFar = [...chunks];
+          setTurns((prev) =>
+            prev.map((t) => (t.id === id ? { ...t, answer: textSoFar, audioChunks: chunksSoFar } : t))
+          );
+          setStatus("speaking");
+          queue.push(evt.audio);
+        } else if (evt.type === "done") {
+          queue.finish();
+        }
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Request failed");
+      setStatus("error");
+    }
+  }, []);
 
   const submitText = useCallback(async () => {
     const text = inputText.trim();
@@ -85,22 +122,15 @@ export function AskWidget() {
     setInputText("");
     setError(null);
     setStatus("processing");
-    try {
-      const result = await sendText(text);
-      handleResult(text, result.assistant_text, result.tts_audio);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Request failed");
-      setStatus("error");
-    }
-  }, [inputText, handleResult]);
+    await runQuery(text, streamText(text));
+  }, [inputText, runQuery]);
 
   const toggleMic = useCallback(async () => {
     if (status === "recording") {
       setStatus("processing");
       try {
         const blob = await recorderRef.current.stop();
-        const result = await processAudio(blob);
-        handleResult(result.user_text, result.assistant_text, result.tts_audio);
+        await runQuery(null, streamProcessAudio(blob));
       } catch (e) {
         setError(e instanceof Error ? e.message : "Could not process audio");
         setStatus("error");
@@ -115,7 +145,7 @@ export function AskWidget() {
       setError("Microphone access denied");
       setStatus("error");
     }
-  }, [status, handleResult]);
+  }, [status, runQuery]);
 
   const busy = status === "processing" || status === "recording";
 
@@ -182,7 +212,7 @@ export function AskWidget() {
                   <div className="max-w-[92%] px-3 py-2.5 rounded-xl rounded-bl-sm bg-cyan-500/10 border border-cyan-500/20 text-xs">
                     <FormattedText text={t.answer} />
                     <button
-                      onClick={() => playAnswer(t.audio)}
+                      onClick={() => playChunks(t.audioChunks)}
                       className="mt-2 inline-flex items-center gap-1 text-[11px] text-cyan-400/80 hover:text-cyan-300 transition-colors"
                     >
                       <Volume2 className="w-3 h-3" />
