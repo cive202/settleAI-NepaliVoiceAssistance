@@ -13,7 +13,7 @@ interface Turn {
   id: string;
   question: string;
   answer: string;
-  audioChunks: string[]; // base64 mp3, one per sentence
+  audioChunks: string[]; // base64 wav, one per sentence
 }
 
 const STATUS_LABEL: Record<Status, string> = {

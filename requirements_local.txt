@@ -1,8 +1,8 @@
 -r requirements_api.txt
 
-# Local (offline) ASR fallback — asr/whisper_local.py.
-# Not needed by the production API path, which uses NVIDIA's hosted
-# whisper-large-v3 endpoint (asr/whisper_nvidia.py) instead.
+# Local (offline) ASR fallback — asr/whisper_local.py. Also what api.py's
+# lifespan actually loads (get_asr(type="local")), so despite the name this
+# is required for the running API, not just an offline fallback.
 torch>=2.5
 transformers>=4.46
 accelerate>=1.0
@@ -11,3 +11,14 @@ accelerate>=1.0
 # api.py's /ws/barge-in endpoint. torchaudio is a transitive import of the
 # cached snakers4/silero-vad hub module, not used directly.
 torchaudio>=2.5
+
+# Local TTS (tts.py) — IndicParlerTTS (ai4bharat/indic-parler-tts, current
+# default) needs the parler-tts package, installed from GitHub since it's
+# not published to PyPI:
+#   pip install git+https://github.com/huggingface/parler-tts.git
+# It hard-pins transformers==4.46.1 (see its setup.py), which is why the
+# floor above is pinned tight rather than left open — anything newer gets
+# downgraded by this install anyway. Requires Python <=3.13: parler-tts's
+# pinned tokenizers release fails to build on 3.14 (removed CPython C-API
+# symbols in its Rust bindings). soundfile (already in requirements_api.txt)
+# covers WAV encoding for both this and VitsNepaliTTS.

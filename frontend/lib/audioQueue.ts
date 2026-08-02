@@ -1,5 +1,5 @@
 /**
- * Plays base64-encoded MP3 chunks back-to-back as they arrive, instead of
+ * Plays base64-encoded WAV chunks back-to-back as they arrive, instead of
  * waiting for the full reply before starting playback. Call finish() once
  * the caller knows no more chunks are coming — onDrained then fires after
  * the last queued chunk finishes playing (or immediately, if the queue was
@@ -12,8 +12,8 @@ export class AudioQueue {
   private current: HTMLAudioElement | null = null;
   onDrained?: () => void;
 
-  push(base64Mp3: string): void {
-    this.queue.push(`data:audio/mp3;base64,${base64Mp3}`);
+  push(base64Wav: string): void {
+    this.queue.push(`data:audio/wav;base64,${base64Wav}`);
     if (!this.playing) this.playNext();
   }
 

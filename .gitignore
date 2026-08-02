@@ -5,3 +5,4 @@ __pycache__/
 python-clients/
 chroma_db/
 logs/
+.venv/

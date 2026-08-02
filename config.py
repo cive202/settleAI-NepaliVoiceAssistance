@@ -84,7 +84,43 @@ RAG_CONFIDENT = 0.45
 RAG_LLM_TEMPERATURE = 0.0  # factual RAG answers
 
 # ── TTS ──────────────────────────────────────
-TTS_TIMEOUT_S = 15  # bound worst-case latency if Google's TTS endpoint stalls
+# ai4bharat/indic-parler-tts (current default, tts.IndicParlerTTS): a
+# Parler-TTS Mini fine-tune with 21 Indic languages incl. Nepali. Requires
+# `pip install git+https://github.com/huggingface/parler-tts.git`, which
+# hard-pins transformers==4.46.1 — see requirements_local.txt. Voice/rate/
+# tone are steered by TTS_VOICE_DESCRIPTION (a natural-language prompt), not
+# a numeric knob. Roughly 25x slower than VITS on CPU (see
+# TTS_SPEAKING_RATE below for the faster fallback engine).
+TTS_MODEL = "ai4bharat/indic-parler-tts"
+# Matches the model card's own recommended description for the Nepali
+# speaker "Amrita" verbatim (https://huggingface.co/ai4bharat/indic-parler-tts)
+# — deviating from the documented phrasing risks out-of-distribution
+# conditioning, which biased output toward Hindi (Nepali is only 28.65
+# training hours vs. Hindi's 107 in this checkpoint, so some accent bleed
+# may not be fully fixable by prompting alone).
+TTS_VOICE_DESCRIPTION = (
+    "Amrita speaks with a high pitch at a slow pace. Her voice is clear, "
+    "with excellent recording quality and only moderate background noise."
+)
+
+# Parler's decoder is autoregressive over up to generation_config.max_length
+# (2610 frames, ~30s of audio) with do_sample=True, so EOS timing is
+# probabilistic — an unlucky sentence can occasionally run 5-6x longer than
+# a typical one (observed: 67s vs. a normal ~10-12s for similar-length
+# text). tts.py bounds max_new_tokens per call to a generous multiple of the
+# text's expected spoken duration so that tail can't happen, without cutting
+# off sentences that would have stopped naturally anyway.
+TTS_PARLER_FRAME_RATE_HZ = 86.13  # DAC 44.1kHz codec: sampling_rate / hop_length
+TTS_PARLER_CHARS_PER_SEC = 13  # rough Nepali speaking-rate estimate
+TTS_PARLER_DURATION_MARGIN = 2.5  # safety multiplier over the naive estimate
+TTS_PARLER_MIN_DURATION_S = 2.0  # floor so very short sentences still get headroom
+
+# tts.VitsNepaliTTS (atul10/nepali_male_v1) — smaller, faster CPU fallback.
+VITS_TTS_MODEL = "atul10/nepali_male_v1"
+# VitsModel's length_scale = 1.0 / speaking_rate, so <1.0 slows speech down,
+# >1.0 speeds it up. 1.0 is the model's own default pace.
+TTS_SPEAKING_RATE = 1.0
+TTS_TIMEOUT_S = 15  # bound worst-case latency if Google's TTS endpoint stalls (gTTS fallback engine only)
 
 # ── Slack ────────────────────────────────────
 # Live-ingests messages from named Slack channels into the RAG store via

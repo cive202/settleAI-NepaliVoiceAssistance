@@ -75,12 +75,12 @@ from config import (
 from llm import LLM
 from perf import timed
 from rag import RAGService
-from tts import GTTSEngine
+from tts import IndicParlerTTS, TTSEngine
 from vad import VAD
 
 _asr: ASRBackend | None = None
 _llm: LLM | None = None
-_tts: GTTSEngine | None = None
+_tts: TTSEngine | None = None
 _rag: RAGService | None = None
 _vad: VAD | None = None
 _slack_listener = None
@@ -93,7 +93,7 @@ async def lifespan(app: FastAPI):
     print("Loading models…")
     _asr = get_asr(type="local")
     _llm = LLM(api_key=GROQ_API_KEY or "", model=LLM_MODEL, system_prompt=SYSTEM_PROMPT)
-    _tts = GTTSEngine(lang="ne")
+    _tts = IndicParlerTTS()
     _rag = RAGService()
     _vad = VAD(threshold=VAD_THRESHOLD)
     print("All models ready.")
