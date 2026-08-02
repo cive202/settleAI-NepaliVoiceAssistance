@@ -9,7 +9,7 @@ Only responsible for:
 
 import pygame
 
-from config import VAD_THRESHOLD, LLM_MODEL, API_KEY, SYSTEM_PROMPT
+from config import VAD_THRESHOLD, LLM_MODEL, GROQ_API_KEY, SYSTEM_PROMPT
 from asr import get_asr
 from vad import VAD
 from llm import LLM
@@ -22,7 +22,7 @@ def main() -> None:
 
     vad = VAD(threshold=VAD_THRESHOLD)
     asr = get_asr(type="nvidia")
-    llm = LLM(api_key=API_KEY, model=LLM_MODEL, system_prompt=SYSTEM_PROMPT)
+    llm = LLM(api_key=GROQ_API_KEY, model=LLM_MODEL, system_prompt=SYSTEM_PROMPT)
     tts = TTS()
 
     print("\n" + "=" * 50)

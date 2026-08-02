@@ -3,7 +3,6 @@ import collections
 from typing import Optional
 import torch
 import numpy as np
-import sounddevice as sd
 
 from config import (
     SAMPLE_RATE,
@@ -47,8 +46,15 @@ class VAD:
         with torch.no_grad():
             return self._model(tensor, SAMPLE_RATE).item()
 
-    def _is_speech(self, chunk_np: np.ndarray) -> bool:
+    def is_speech(self, chunk_np: np.ndarray) -> bool:
         return self._score(chunk_np) >= self.threshold
+
+    def reset_states(self) -> None:
+        """Clears the model's internal RNN state. Call at the start of each
+        new audio stream/connection — Silero carries hidden state across
+        calls, so reusing the model without resetting bleeds one stream's
+        context into the next."""
+        self._model.reset_states()
 
     def _run_state_machine(self, stream) -> list:
         """
@@ -73,7 +79,7 @@ class VAD:
         while True:
             chunk, _ = stream.read(CHUNK_SAMPLES)
             chunk_np = chunk.flatten()
-            speaking = self._is_speech(chunk_np)
+            speaking = self.is_speech(chunk_np)
 
             if state == WAITING:
                 ring_buffer.append(chunk_np)
@@ -135,7 +141,14 @@ class VAD:
         """
         Listens to the mic and returns a float32 numpy array
         of the captured utterance, or None if nothing detected.
+
+        CLI-only path (records from the local machine's mic via
+        sounddevice) — imported lazily so importing VAD elsewhere (e.g.
+        api.py, which scores browser audio over a WebSocket instead) doesn't
+        require sounddevice/portaudio to be installed.
         """
+        import sounddevice as sd
+
         print("Speak")
 
         with sd.InputStream(

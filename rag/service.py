@@ -15,6 +15,7 @@ from langchain_ollama import ChatOllama
 from config import (
     RAG_CHAT_MODEL,
     RAG_CONFIDENT,
+    RAG_CONTEXT_TOKEN_BUDGET,
     RAG_LLM_TEMPERATURE,
     RAG_LOW_CONFIDENCE,
     RAG_MAX_CONTEXT_PAGES,
@@ -26,6 +27,13 @@ from perf import timed
 
 from .scraper import scrape, split
 from .store import get_embeddings, get_vectorstore
+
+_CHARS_PER_TOKEN = 4  # rough heuristic for English/mixed-script scraped web text
+
+
+def _approx_tokens(text: str) -> int:
+    return len(text) // _CHARS_PER_TOKEN
+
 
 _RAG_PROMPT = ChatPromptTemplate.from_messages(
     [
@@ -76,13 +84,55 @@ class RAGService:
         chunks by source and reassembles the full page) treats it exactly
         like a scraped page.
         """
-        source = f"manual-qa:{uuid.uuid4().hex}"
-        doc = Document(
-            page_content=f"Q: {question}\nA: {answer}",
-            metadata={"source": source, "start_index": 0},
-        )
-        ids = self._store.add_documents([doc])
-        return {"question": question, "answer": answer, "source": source, "id": ids[0]}
+        return self.add_qa_batch([(question, answer)])[0]
+
+    def add_qa_batch(self, pairs: list[tuple[str, str]]) -> list[dict]:
+        """Like add_qa, but embeds and stores every pair in one round trip.
+
+        Ollama's embedding endpoint is called once per add_documents() call,
+        not once per document, so batching a bulk FAQ import through this
+        instead of looping add_qa() turns N embedding requests into 1.
+        """
+        docs = []
+        sources = []
+        for question, answer in pairs:
+            source = f"manual-qa:{uuid.uuid4().hex}"
+            sources.append(source)
+            docs.append(
+                Document(
+                    page_content=f"Q: {question}\nA: {answer}",
+                    metadata={"source": source, "start_index": 0},
+                )
+            )
+        ids = self._store.add_documents(docs) if docs else []
+        return [
+            {"question": q, "answer": a, "source": s, "id": i}
+            for (q, a), s, i in zip(pairs, sources, ids)
+        ]
+
+    def add_texts(self, items: list[tuple[str, str]]) -> list[dict]:
+        """Store arbitrary text as its own retrievable page, keyed by an explicit source.
+
+        Unlike add_qa_batch (which wraps pairs in a "Q: ... A: ..." template),
+        text is stored verbatim — for content that already reads naturally on
+        its own, e.g. Slack messages (see slack_bot/listener.py).
+        """
+        docs = [
+            Document(page_content=text, metadata={"source": source, "start_index": 0})
+            for text, source in items
+        ]
+        ids = self._store.add_documents(docs) if docs else []
+        return [{"text": t, "source": s, "id": i} for (t, s), i in zip(items, ids)]
+
+    def embed_query(self, text: str) -> list[float]:
+        """Embed `text` directly, with no translation step.
+
+        Used for the answer-cache similarity check (api.py), not for document
+        retrieval — that path needs the translation in retrieve_context() to
+        match well against the English doc store, but comparing a Nepali
+        question against previously-cached Nepali questions doesn't.
+        """
+        return self._embeddings.embed_query(text)
 
     def query(self, question: str) -> dict:
         """Answer `question` using only previously ingested context."""
@@ -142,13 +192,27 @@ class RAGService:
                 chunks_by_source[metadata.get("source", "")].append((text, metadata))
 
             page_texts = []
+            budget = RAG_CONTEXT_TOKEN_BUDGET
+            used_sources = []
             for source in sources:
                 ordered = sorted(
                     chunks_by_source[source], key=lambda pair: pair[1].get("start_index", 0)
                 )
-                page_texts.append("\n".join(text for text, _ in ordered))
+                page_text = "\n".join(text for text, _ in ordered)
+                page_tokens = _approx_tokens(page_text)
+                if page_tokens > budget:
+                    if not page_texts:
+                        # Even the single highest-ranked page alone exceeds the
+                        # budget — truncate it rather than return no context at all.
+                        page_text = page_text[: budget * _CHARS_PER_TOKEN]
+                        page_texts.append(page_text)
+                        used_sources.append(source)
+                    break
+                page_texts.append(page_text)
+                used_sources.append(source)
+                budget -= page_tokens
 
-        return "\n\n".join(page_texts), sources
+        return "\n\n".join(page_texts), used_sources
 
     def _translate_to_english(self, text: str) -> str:
         # Asking the local model to "translate" already-English text into English

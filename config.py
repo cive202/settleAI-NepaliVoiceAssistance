@@ -9,12 +9,12 @@ from dotenv import load_dotenv
 load_dotenv(".env_local")
 
 # ── API ──────────────────────────────────────
-API_KEY = os.getenv("API_KEY")
-LLM_MODEL = "openai/gpt-oss-120b"
-LLM_BASE_URL = "https://integrate.api.nvidia.com/v1"
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+LLM_MODEL = "llama-3.1-8b-instant"
+LLM_BASE_URL = "https://api.groq.com/openai/v1"
 
 # ── ASR ──────────────────────────────────────
-WHISPER_MODEL = "base"  # tiny | base | small | medium | large
+WHISPER_MODEL = "kiranpantha/whisper-large-v3-turbo-nepali"  # HF repo id, used by the local (transformers) ASR fallback
 SAMPLE_RATE = 16000  # Hz — Whisper + Silero both require 16kHz
 ASR_KEY = os.getenv("ASR_KEY")
 # Hosted whisper-large-v3 is only reachable via NVIDIA's gRPC NVCF endpoint
@@ -34,12 +34,14 @@ MIN_SPEECH_DURATION = 0.4  # seconds; shorter = ignored (coughs, noise)
 MAX_SPEECH_DURATION = 30  # seconds; safety cap per turn
 PRE_SPEECH_PADDING_MS = 300  # ms of audio kept before speech starts
 POST_SPEECH_PADDING_MS = 400  # ms of silence appended after speech ends
+BARGE_IN_CONSECUTIVE_FRAMES = 3  # ~96ms of continuous speech required before
+# firing barge-in over /ws/barge-in (debounces single-frame flukes)
 
 # ── LLM ──────────────────────────────────────
 LLM_TEMPERATURE = 0.7
 LLM_MAX_TOKENS = 768
 LLM_MAX_HISTORY_TURNS = 8  # user+assistant pairs kept, beyond which older turns are dropped
-LLM_TIMEOUT_S = 20  # bound worst-case latency if the NVIDIA endpoint stalls
+LLM_TIMEOUT_S = 15  # bound worst-case latency if the Groq endpoint stalls
 
 SYSTEM_PROMPT = (
     "तपाईं SettleAI नामक एक सहायक हुनुहुन्छ। सधैं नेपालीमा छोटो र स्पष्ट जवाफ दिनुहोस्। "
@@ -52,7 +54,9 @@ SYSTEM_PROMPT = (
 
 # ── RAG ──────────────────────────────────────
 RAG_OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-RAG_OLLAMA_TIMEOUT_S = 20  # bound worst-case latency if the local Ollama daemon stalls
+RAG_OLLAMA_TIMEOUT_S = 60  # bound worst-case latency if the local Ollama daemon stalls;
+# raised from 20s after full retrieval+generation was observed to exceed it on
+# this machine's CPU for llama3.1 (retrieval alone was instant, generation was the slow part)
 RAG_EMBED_MODEL = "nomic-embed-text"  # run: ollama pull nomic-embed-text
 RAG_CHAT_MODEL = "llama3.1"  # run: ollama pull llama3.1
 RAG_PERSIST_DIR = "chroma_db"  # on-disk Chroma persistence directory
@@ -63,6 +67,9 @@ RAG_MAX_DEPTH = 2  # default recursive crawl depth
 RAG_MAX_PAGES = 60  # safety cap on pages per ingest (JS rendering is slow)
 RAG_RETRIEVER_K = 12  # top-k chunks retrieved per query
 RAG_MAX_CONTEXT_PAGES = 5  # cap on distinct pages fully expanded into context
+RAG_CONTEXT_TOKEN_BUDGET = 3000  # approx-token cap on assembled context text, so
+# system prompt + history + context + response stay under Groq's free-tier
+# 6000 TPM limit even when RAG_MAX_CONTEXT_PAGES pages would otherwise blow past it
 
 # Best-match relevance score (0-1) from similarity_search_with_relevance_scores
 # decides how to handle a query:
@@ -78,3 +85,13 @@ RAG_LLM_TEMPERATURE = 0.0  # factual RAG answers
 
 # ── TTS ──────────────────────────────────────
 TTS_TIMEOUT_S = 15  # bound worst-case latency if Google's TTS endpoint stalls
+
+# ── Slack ────────────────────────────────────
+# Live-ingests messages from named Slack channels into the RAG store via
+# Socket Mode, so the voice agent can answer questions grounded in recent
+# Slack traffic without a manual /api/rag/ingest call. See slack_bot/listener.py.
+SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")  # xoxb-... , needs channels:history + channels:read
+SLACK_APP_TOKEN = os.getenv("SLACK_APP_TOKEN")  # xapp-... , needs connections:write (Socket Mode)
+# Comma-separated channel names ("#support,#general") or IDs ("C0123,C0456")
+SLACK_CHANNELS = [c.strip() for c in os.getenv("SLACK_CHANNELS", "").split(",") if c.strip()]
+SLACK_ENABLED = bool(SLACK_BOT_TOKEN and SLACK_APP_TOKEN and SLACK_CHANNELS)

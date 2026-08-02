@@ -12,3 +12,7 @@ langchain-text-splitters>=1.1.2,<2.0
 chromadb>=1.3.5,<2.0
 beautifulsoup4>=4.12
 playwright>=1.48
+
+# Slack live ingestion (slack_bot/listener.py) — Socket Mode needs aiohttp
+slack_bolt>=1.20
+aiohttp>=3.10

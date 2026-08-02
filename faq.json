@@ -1,0 +1,366 @@
+{
+    "source_note": "Extracted from KEC's own official prospectus/brochure PDF (hosted on their CMS at wms.edigitalnepal.com, linked from kecktm.edu.np). This is primary-source data, not a secondary listing. However, brochures are typically printed annually — faculty lists change (people join/leave), so treat this as accurate as of the brochure's print date, not guaranteed current. Recommend periodic re-verification against the live '/faculty-and-staff' pages once you set up JS-rendering scraping.",
+    "metadata": {
+        "type": "faculty_directory",
+        "institution": "Kathmandu Engineering College (KEC)"
+    },
+    "departments": [
+        {
+            "department": "Department of Architecture",
+            "hod": "Ar. Moon Singh Dongol",
+            "hod_email": "moon.dongol@kecktm.edu.np",
+            "faculty": [
+                {
+                    "name": "Ar. Shailita Manandhar",
+                    "designation": "Vice Principal / Associate Professor"
+                },
+                {
+                    "name": "Ar. Moon Singh Dongol",
+                    "designation": "HOD / Associate Professor"
+                },
+                {
+                    "name": "Ar. Sweta Shrestha",
+                    "designation": "Dy. HOD / Associate Professor / Research Member"
+                },
+                {
+                    "name": "Ar. Kailash Shrestha",
+                    "designation": "Associate Professor"
+                },
+                {
+                    "name": "Ar. Subash Phuyal",
+                    "designation": "4th & 5th year Co-ordinator / Thesis Co-ordinator / Associate Professor"
+                },
+                {
+                    "name": "Ar. Pranita Sharma Pandey",
+                    "designation": "Associate Professor / Research Member"
+                },
+                {
+                    "name": "Ar. Suchita Bajracharya",
+                    "designation": "2nd & 3rd year Co-ordinator / Associate Professor"
+                },
+                {
+                    "name": "Ar. Pratibha Manandhar",
+                    "designation": "1st year Coordinator / Associate Professor"
+                },
+                {
+                    "name": "Ar. Sagun Maharjan",
+                    "designation": "Senior Lecturer"
+                }
+            ]
+        },
+        {
+            "department": "Department of Civil Engineering",
+            "hod": "Er. Arjun Poudel",
+            "hod_email": "arjun.poudel@kecktm.edu.np",
+            "faculty": [
+                {
+                    "name": "Er. Arjun Poudel",
+                    "designation": "HOD / Associate Professor"
+                },
+                {
+                    "name": "Er. Harshikesh Kr. Karna",
+                    "designation": "Dy. HOD / Sr. Lecturer / 2nd Year Co-ordinator"
+                },
+                {
+                    "name": "Er. Ishwar Adhikari",
+                    "designation": "Associate Professor"
+                },
+                {
+                    "name": "Er. Bimal Bhattarai",
+                    "designation": "Associate Professor"
+                },
+                {
+                    "name": "Er. Ramesh Kaphle",
+                    "designation": "Associate Professor / Dy. Exam Chief"
+                },
+                {
+                    "name": "Er. Rajan Nhemaphuki",
+                    "designation": "4th year Co-ordinator / Lecturer"
+                },
+                {
+                    "name": "Er. Nimesh Karki",
+                    "designation": "3rd year Co-ordinator / Lecturer"
+                },
+                {
+                    "name": "Er. Abhishek Bhattarai",
+                    "designation": "Lab Co-ordinator / Lecturer"
+                },
+                {
+                    "name": "Er. Sumona Bajracarya",
+                    "designation": "1st year Co-ordinator / Lecturer"
+                },
+                {
+                    "name": "Er. Shantosh Khadka",
+                    "designation": "Lecturer"
+                },
+                {
+                    "name": "Er. Bikram Shah",
+                    "designation": "Lecturer"
+                },
+                {
+                    "name": "Er. Shubham Shekhar Jha",
+                    "designation": "Lecturer"
+                },
+                {
+                    "name": "Er. Abhishek Poudel",
+                    "designation": "Lecturer"
+                }
+            ],
+            "note": "Department strength reported as 17 full-time and 25+ part-time/visiting faculty; the brochure names roughly the core full-time list above."
+        },
+        {
+            "department": "Department of Electrical Engineering",
+            "hod": "Er. Binod Bhandari",
+            "faculty": [
+                {
+                    "name": "Er. Binod Bhandari",
+                    "designation": "HOD / Associate Professor"
+                },
+                {
+                    "name": "Er. Manoj Raj Dhungana",
+                    "designation": "Senior Lecturer"
+                },
+                {
+                    "name": "Er. Sunil Karki",
+                    "designation": "Project Coordinator / Lecturer"
+                },
+                {
+                    "name": "Er. Baijnath Agrahari",
+                    "designation": "1st & 2nd Year Coordinator / Lecturer"
+                },
+                {
+                    "name": "Er. Chitra Bdr. Khadka",
+                    "designation": "Chief Lab Incharge"
+                }
+            ],
+            "note": "Department reported to have 20+ total professional faculty including visiting professors from IOE; brochure lists the core full-time team above."
+        },
+        {
+            "department": "Department of Computer Engineering",
+            "hod": "Er. Sudeep Shakya",
+            "hod_email": "sudeep.shakya@kecktm.edu.np",
+            "faculty": [
+                {
+                    "name": "Er. Sudeep Shakya",
+                    "designation": "HOD / Associate Professor"
+                },
+                {
+                    "name": "Er. Kunjan Amatya",
+                    "designation": "Dy. HOD / Associate Professor / Research Member"
+                },
+                {
+                    "name": "Er. Mahesh Singh Kathayat",
+                    "designation": "Academic Advisor / Associate Professor"
+                },
+                {
+                    "name": "Er. Shree Krishna Sulu",
+                    "designation": "Hostel Warden / Associate Professor"
+                },
+                {
+                    "name": "Er. Nabin Neupane",
+                    "designation": "3rd Year Coordinator / Associate Professor"
+                },
+                {
+                    "name": "Er. Sharad Chandra Joshi",
+                    "designation": "Major Project Coordinator / Associate Professor"
+                },
+                {
+                    "name": "Er. Shyam Dahal",
+                    "designation": "Associate Professor"
+                },
+                {
+                    "name": "Er. Anju Khanal",
+                    "designation": "Sr. Lecturer"
+                },
+                {
+                    "name": "Er. Sharad Neupane",
+                    "designation": "1st year Coordinator / Sr. Lecturer"
+                },
+                {
+                    "name": "Er. Ritu Bajracharya",
+                    "designation": "2nd year Coordinator / Lecturer"
+                },
+                {
+                    "name": "Er. Krishta Byanju",
+                    "designation": "Minor Project Coordinator / Lecturer"
+                }
+            ],
+            "note": "Department reports 14 full-time + 20 visiting faculty; brochure lists the core full-time team above."
+        },
+        {
+            "department": "Department of Electronics, Communication and Information Engineering",
+            "hod": "Er. Suramya Sharma Dahal",
+            "hod_email": "suramya.dahal@kecktm.edu.np",
+            "faculty": [
+                {
+                    "name": "Er. Suramya Sharma Dahal",
+                    "designation": "HOD / Associate Professor / Research Member"
+                },
+                {
+                    "name": "Er. Smriti Nakarmi",
+                    "designation": "Dy. HOD / Associate Professor"
+                },
+                {
+                    "name": "Er. Sagun Manandhar",
+                    "designation": "Research Head / Associate Professor"
+                },
+                {
+                    "name": "Er. Anmol Ratna Bajracharya",
+                    "designation": "IT-Incharge / Research Member / Associate Professor"
+                },
+                {
+                    "name": "Er. Ravi Poudel",
+                    "designation": "1st & 4th year Coordinator / Associate Professor"
+                },
+                {
+                    "name": "Er. Gaurav Gautam",
+                    "designation": "2nd & 3rd year Coordinator / Associate Professor"
+                },
+                {
+                    "name": "Er. Sujan Shrestha",
+                    "designation": "Major Project Coordinator / Associate Professor"
+                },
+                {
+                    "name": "Er. Pushpa Dhamala",
+                    "designation": "Associate Professor"
+                },
+                {
+                    "name": "Dr. Dipen Manandhar",
+                    "designation": "Major Project Coordinator / Lecturer"
+                },
+                {
+                    "name": "Er. Rubi Kumari Mahato",
+                    "designation": "Lab Coordinator / Senior Lecturer"
+                },
+                {
+                    "name": "Er. Dhawa Sang Dong",
+                    "designation": "Research Member / Lecturer"
+                },
+                {
+                    "name": "Er. Sarina Barahi",
+                    "designation": "Lecturer"
+                }
+            ]
+        },
+        {
+            "department": "Department of Applied Sciences",
+            "hod": "Mr. Shankar Parajuli",
+            "hod_email": "shankar.parajuli@kecktm.edu.np",
+            "faculty": [
+                {
+                    "name": "Mr. Shankar Parajuli",
+                    "designation": "HOD / Associate Professor"
+                },
+                {
+                    "name": "Mr. Yadab Gaire",
+                    "designation": "Dy. HOD / Associate Professor"
+                },
+                {
+                    "name": "Mr. Subash Pokhrel",
+                    "designation": "Chief, Guidance & Counselling"
+                },
+                {
+                    "name": "Mr. Anjeeb Lal Shrestha",
+                    "designation": "Exam Chief / Associate Professor"
+                },
+                {
+                    "name": "Ms. Swastika Lama Yonjan",
+                    "designation": "Associate Professor"
+                },
+                {
+                    "name": "Mr. Dev Raj Khatri",
+                    "designation": "Senior Lecturer"
+                },
+                {
+                    "name": "Mr. Yogendra Parajuli Thapa",
+                    "designation": "Senior Lecturer"
+                },
+                {
+                    "name": "Ms. Anjana Bhele Shrestha",
+                    "designation": "Senior Lecturer"
+                }
+            ],
+            "note": "This department teaches foundational subjects (Math, Physics, Chemistry, English, Nepali) across all engineering programs; it supports the five main departments rather than running its own degree."
+        },
+        {
+            "department": "Department of Mechanical Engineering",
+            "hod": "Dr. Lila Raj Koirala",
+            "hod_email": "lila.koirala@kecktm.edu.np",
+            "faculty": [
+                {
+                    "name": "Dr. Lila Raj Koirala",
+                    "designation": "HOD / Associate Professor"
+                },
+                {
+                    "name": "Er. Bishal Pudasaini",
+                    "designation": "Lecturer"
+                }
+            ],
+            "note": "This is a supporting department (teaches Thermodynamics, Engineering Drawing, Workshop Technology etc. as service courses) — KEC does not run a standalone Mechanical Engineering degree."
+        }
+    ],
+    "administration": [
+        {
+            "name": "Prof. Er. Hirendra Man Pradhan",
+            "designation": "Chairman / Principal"
+        },
+        {
+            "name": "Mr. Rajendra Shakya",
+            "designation": "Managing Director"
+        },
+        {
+            "name": "Associate Prof. Shailita Manandhar Joshi",
+            "designation": "Vice Principal"
+        },
+        {
+            "name": "Mr. Suresh Pd. Chaudhary",
+            "designation": "Chief Administrator"
+        },
+        {
+            "name": "Associate Prof. Anjeeb Lal Shrestha",
+            "designation": "Chief, Exam Section"
+        },
+        {
+            "name": "Associate Prof. Subash Pokhrel",
+            "designation": "Guidance & Counselling Chief"
+        },
+        {
+            "name": "Ms. Bijeta Poudel",
+            "designation": "Senior Account Officer"
+        }
+    ],
+    "faq_style": [
+        {
+            "question": "Who is the HOD of the Computer Engineering department at KEC?",
+            "answer": "Er. Sudeep Shakya is the Head of the Department (HOD) of Computer Engineering at KEC. He can be reached at sudeep.shakya@kecktm.edu.np."
+        },
+        {
+            "question": "Who is the HOD of the Civil Engineering department at KEC?",
+            "answer": "Er. Arjun Poudel is the Head of the Department (HOD) of Civil Engineering at KEC. He can be reached at arjun.poudel@kecktm.edu.np."
+        },
+        {
+            "question": "Who is the HOD of the Electrical Engineering department at KEC?",
+            "answer": "Er. Binod Bhandari is the Head of the Department (HOD) of Electrical Engineering at KEC."
+        },
+        {
+            "question": "Who is the HOD of the Electronics, Communication and Information Engineering department at KEC?",
+            "answer": "Er. Suramya Sharma Dahal is the Head of the Department (HOD) of Electronics, Communication and Information Engineering at KEC. She can be reached at suramya.dahal@kecktm.edu.np."
+        },
+        {
+            "question": "Who is the HOD of the Architecture department at KEC?",
+            "answer": "Ar. Moon Singh Dongol is the Head of the Department (HOD) of Architecture at KEC. He can be reached at moon.dongol@kecktm.edu.np."
+        },
+        {
+            "question": "Who is the Principal of KEC?",
+            "answer": "Prof. Er. Hirendra Man Pradhan is the Chairman/Principal of Kathmandu Engineering College."
+        },
+        {
+            "question": "Who is the Vice Principal of KEC?",
+            "answer": "Associate Prof. Shailita Manandhar Joshi is the Vice Principal of Kathmandu Engineering College."
+        },
+        {
+            "question": "Who is the Managing Director of KEC?",
+            "answer": "Mr. Rajendra Shakya is the Managing Director of Kathmandu Engineering College."
+        }
+    ]
+}

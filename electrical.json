@@ -1,0 +1,60 @@
+{
+    "source_note": "The specific URL https://kecktm.edu.np/p/electrical-engineering-brochure-9898 is a JS-rendered SPA page — could not fetch its content or locate its underlying PDF asset via search. These Q&A pairs are instead drawn from the Electrical Engineering section of KEC's official master prospectus PDF (already scraped in this conversation), which covers the same department. If the standalone brochure has content not in the prospectus, it would need Playwright/headless-browser scraping to access.",
+    "metadata": {
+        "type": "faq",
+        "institution": "Kathmandu Engineering College (KEC)",
+        "department": "Electrical Engineering"
+    },
+    "faqs": [
+        {
+            "id": "eee_001",
+            "question": "What does the Department of Electrical Engineering at KEC offer?",
+            "answer": "KEC's Department of Electrical Engineering offers in-depth analytical treatment of electrical systems, with specialized optional subjects. The department has more than 20 professional faculty members, including visiting professors from the Institute of Engineering (IOE)."
+        },
+        {
+            "id": "eee_002",
+            "question": "Why was the Electrical Engineering department established at KEC?",
+            "answer": "The department was established to meet the rising demand for engineers in power systems, renewable energy technology, and industrial applications. It has well-equipped laboratories and conducts frequent field visits to power stations and manufacturing industries, which students are required to attend and report on."
+        },
+        {
+            "id": "eee_003",
+            "question": "What career paths are open to Electrical Engineering graduates from KEC?",
+            "answer": "Graduates can pursue careers in the power industry, manufacturing industry, renewable energy sector, and traction systems. Many work for the Nepal Electricity Authority (NEA) and various government ministries, while entrepreneurship is also popular among electrical engineering graduates."
+        },
+        {
+            "id": "eee_004",
+            "question": "What lab facilities does the Electrical Engineering department have?",
+            "answer": "The department runs labs including an Electric Circuit Lab, Electric Machines Lab, Instrumentation and Control Systems Lab, Switchgear and Protection Lab, Power Electronics Lab, Electric Drives Lab, and Power Plant Equipment Lab."
+        },
+        {
+            "id": "eee_005",
+            "question": "What elective subjects can Electrical Engineering students choose at KEC?",
+            "answer": "Electives include Electric Energy System Management, Rural Electrification, Neural Networks, Micro-Hydro Power, Advanced Power System, Biomedical Instrumentation, Reliability Engineering, Applied Photovoltaic Engineering, and Wind Energy Conversion System."
+        },
+        {
+            "id": "eee_006",
+            "question": "Does the Electrical Engineering department publish anything?",
+            "answer": "Yes, the department publishes an annual magazine called 'Synergy', which includes articles and synopses of projects done by fourth-year students, encouraging participation in literature review and research."
+        },
+        {
+            "id": "eee_007",
+            "question": "Is there a student club for Electrical Engineering at KEC?",
+            "answer": "Yes, the KEC Electrical Club (founded February 2016) organizes workshops, software simulation trainings, talk programs, and publishes the annual magazine Synergy. Past events include talk shows on hydropower development in Nepal and Proteus simulation training."
+        },
+        {
+            "id": "eee_008",
+            "question": "Who is the HOD of the Electrical Engineering department at KEC?",
+            "answer": "Er. Binod Bhandari is the HOD (Associate Professor) of the Department of Electrical Engineering at KEC."
+        },
+        {
+            "id": "eee_009",
+            "question": "How many years does the Bachelor of Electrical Engineering program take at KEC?",
+            "answer": "The Bachelor of Electrical Engineering (BEE) program at KEC is a 4-year program affiliated with Tribhuvan University."
+        },
+        {
+            "id": "eee_010",
+            "question": "What kinds of jobs involve electrical engineering skills according to KEC's department description?",
+            "answer": "Roles suited to electrical engineering interest include working with power generation, transmission and distribution; working with machines and control systems; general electrical systems work; and working with alternative and renewable energy sources."
+        }
+    ]
+}
