@@ -464,6 +464,24 @@ async def rag_ingest(body: IngestBody):
     return result
 
 
+@app.post("/api/rag/ingest_faq")
+async def rag_ingest_faq():
+    """Ingest the bundled faq.json (repo root) as prioritized FAQ entries —
+    see RAGService.add_faq_batch. Safe to call repeatedly (upserts by id)."""
+    assert _rag
+    try:
+        with timed("rag_ingest_faq.total"):
+            with open("faq.json", encoding="utf-8") as f:
+                data = json.load(f)
+            result = await asyncio.to_thread(_rag.add_faq_batch, data["faqs"])
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="faq.json not found in the backend's working directory")
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"FAQ ingest error: {exc}")
+    _ANSWER_CACHE.clear()
+    return {"ingested": len(result), "faqs": result}
+
+
 @app.post("/api/rag/query")
 async def rag_query(body: QueryBody):
     assert _rag

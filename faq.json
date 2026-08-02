@@ -1,366 +1,131 @@
 {
-    "source_note": "Extracted from KEC's own official prospectus/brochure PDF (hosted on their CMS at wms.edigitalnepal.com, linked from kecktm.edu.np). This is primary-source data, not a secondary listing. However, brochures are typically printed annually — faculty lists change (people join/leave), so treat this as accurate as of the brochure's print date, not guaranteed current. Recommend periodic re-verification against the live '/faculty-and-staff' pages once you set up JS-rendering scraping.",
+    "source_note": "kecktm.edu.np is a client-rendered SPA (JS required) — could not be scraped with plain HTTP fetch. This dataset was compiled from secondary sources: an official KEC FAQ mirrored on virtualedufairnepal.com, plus collegenp.com, collegeinfonepal.com, and studyinfocentre.com listings. Phone numbers and fees vary across sources — verify against onlineform.kecktm.edu.np or by calling before using in production. Recommend re-scraping the live site with Playwright/Puppeteer for authoritative, current data.",
     "metadata": {
-        "type": "faculty_directory",
+        "type": "faq",
         "institution": "Kathmandu Engineering College (KEC)"
     },
-    "departments": [
+    "faqs": [
         {
-            "department": "Department of Architecture",
-            "hod": "Ar. Moon Singh Dongol",
-            "hod_email": "moon.dongol@kecktm.edu.np",
-            "faculty": [
-                {
-                    "name": "Ar. Shailita Manandhar",
-                    "designation": "Vice Principal / Associate Professor"
-                },
-                {
-                    "name": "Ar. Moon Singh Dongol",
-                    "designation": "HOD / Associate Professor"
-                },
-                {
-                    "name": "Ar. Sweta Shrestha",
-                    "designation": "Dy. HOD / Associate Professor / Research Member"
-                },
-                {
-                    "name": "Ar. Kailash Shrestha",
-                    "designation": "Associate Professor"
-                },
-                {
-                    "name": "Ar. Subash Phuyal",
-                    "designation": "4th & 5th year Co-ordinator / Thesis Co-ordinator / Associate Professor"
-                },
-                {
-                    "name": "Ar. Pranita Sharma Pandey",
-                    "designation": "Associate Professor / Research Member"
-                },
-                {
-                    "name": "Ar. Suchita Bajracharya",
-                    "designation": "2nd & 3rd year Co-ordinator / Associate Professor"
-                },
-                {
-                    "name": "Ar. Pratibha Manandhar",
-                    "designation": "1st year Coordinator / Associate Professor"
-                },
-                {
-                    "name": "Ar. Sagun Maharjan",
-                    "designation": "Senior Lecturer"
-                }
-            ]
+            "id": "faq_001",
+            "question": "What is Kathmandu Engineering College?",
+            "answer": "Kathmandu Engineering College (KEC) is a private, Tribhuvan University (TU)-affiliated engineering college established in 1998, located at Kalimati, Kathmandu. It was the first ISO 9001:2008 certified college in Nepal.",
+            "category": "general"
         },
         {
-            "department": "Department of Civil Engineering",
-            "hod": "Er. Arjun Poudel",
-            "hod_email": "arjun.poudel@kecktm.edu.np",
-            "faculty": [
-                {
-                    "name": "Er. Arjun Poudel",
-                    "designation": "HOD / Associate Professor"
-                },
-                {
-                    "name": "Er. Harshikesh Kr. Karna",
-                    "designation": "Dy. HOD / Sr. Lecturer / 2nd Year Co-ordinator"
-                },
-                {
-                    "name": "Er. Ishwar Adhikari",
-                    "designation": "Associate Professor"
-                },
-                {
-                    "name": "Er. Bimal Bhattarai",
-                    "designation": "Associate Professor"
-                },
-                {
-                    "name": "Er. Ramesh Kaphle",
-                    "designation": "Associate Professor / Dy. Exam Chief"
-                },
-                {
-                    "name": "Er. Rajan Nhemaphuki",
-                    "designation": "4th year Co-ordinator / Lecturer"
-                },
-                {
-                    "name": "Er. Nimesh Karki",
-                    "designation": "3rd year Co-ordinator / Lecturer"
-                },
-                {
-                    "name": "Er. Abhishek Bhattarai",
-                    "designation": "Lab Co-ordinator / Lecturer"
-                },
-                {
-                    "name": "Er. Sumona Bajracarya",
-                    "designation": "1st year Co-ordinator / Lecturer"
-                },
-                {
-                    "name": "Er. Shantosh Khadka",
-                    "designation": "Lecturer"
-                },
-                {
-                    "name": "Er. Bikram Shah",
-                    "designation": "Lecturer"
-                },
-                {
-                    "name": "Er. Shubham Shekhar Jha",
-                    "designation": "Lecturer"
-                },
-                {
-                    "name": "Er. Abhishek Poudel",
-                    "designation": "Lecturer"
-                }
-            ],
-            "note": "Department strength reported as 17 full-time and 25+ part-time/visiting faculty; the brochure names roughly the core full-time list above."
+            "id": "faq_002",
+            "question": "Where is KEC located?",
+            "answer": "KEC is located at Ganeshman Singh Road, Kalimati, Kathmandu Metropolitan City, Nepal.",
+            "category": "general"
         },
         {
-            "department": "Department of Electrical Engineering",
-            "hod": "Er. Binod Bhandari",
-            "faculty": [
-                {
-                    "name": "Er. Binod Bhandari",
-                    "designation": "HOD / Associate Professor"
-                },
-                {
-                    "name": "Er. Manoj Raj Dhungana",
-                    "designation": "Senior Lecturer"
-                },
-                {
-                    "name": "Er. Sunil Karki",
-                    "designation": "Project Coordinator / Lecturer"
-                },
-                {
-                    "name": "Er. Baijnath Agrahari",
-                    "designation": "1st & 2nd Year Coordinator / Lecturer"
-                },
-                {
-                    "name": "Er. Chitra Bdr. Khadka",
-                    "designation": "Chief Lab Incharge"
-                }
-            ],
-            "note": "Department reported to have 20+ total professional faculty including visiting professors from IOE; brochure lists the core full-time team above."
+            "id": "faq_003",
+            "question": "How can I reach the college?",
+            "answer": "The college is served by regular public transport including buses, micro-vans, and tempos, as it is located on the main road at Kalimati, Kathmandu.",
+            "category": "general"
         },
         {
-            "department": "Department of Computer Engineering",
-            "hod": "Er. Sudeep Shakya",
-            "hod_email": "sudeep.shakya@kecktm.edu.np",
-            "faculty": [
-                {
-                    "name": "Er. Sudeep Shakya",
-                    "designation": "HOD / Associate Professor"
-                },
-                {
-                    "name": "Er. Kunjan Amatya",
-                    "designation": "Dy. HOD / Associate Professor / Research Member"
-                },
-                {
-                    "name": "Er. Mahesh Singh Kathayat",
-                    "designation": "Academic Advisor / Associate Professor"
-                },
-                {
-                    "name": "Er. Shree Krishna Sulu",
-                    "designation": "Hostel Warden / Associate Professor"
-                },
-                {
-                    "name": "Er. Nabin Neupane",
-                    "designation": "3rd Year Coordinator / Associate Professor"
-                },
-                {
-                    "name": "Er. Sharad Chandra Joshi",
-                    "designation": "Major Project Coordinator / Associate Professor"
-                },
-                {
-                    "name": "Er. Shyam Dahal",
-                    "designation": "Associate Professor"
-                },
-                {
-                    "name": "Er. Anju Khanal",
-                    "designation": "Sr. Lecturer"
-                },
-                {
-                    "name": "Er. Sharad Neupane",
-                    "designation": "1st year Coordinator / Sr. Lecturer"
-                },
-                {
-                    "name": "Er. Ritu Bajracharya",
-                    "designation": "2nd year Coordinator / Lecturer"
-                },
-                {
-                    "name": "Er. Krishta Byanju",
-                    "designation": "Minor Project Coordinator / Lecturer"
-                }
-            ],
-            "note": "Department reports 14 full-time + 20 visiting faculty; brochure lists the core full-time team above."
+            "id": "faq_004",
+            "question": "What programs does KEC offer?",
+            "answer": "KEC offers five Bachelor's level programs: Bachelor of Architecture (B.Arch.), Bachelor of Civil Engineering (BE Civil), Bachelor of Computer Engineering (BCE), Bachelor of Electrical Engineering (BEE), and Bachelor of Electronics, Communication and Information Engineering (BEI).",
+            "category": "academics"
         },
         {
-            "department": "Department of Electronics, Communication and Information Engineering",
-            "hod": "Er. Suramya Sharma Dahal",
-            "hod_email": "suramya.dahal@kecktm.edu.np",
-            "faculty": [
-                {
-                    "name": "Er. Suramya Sharma Dahal",
-                    "designation": "HOD / Associate Professor / Research Member"
-                },
-                {
-                    "name": "Er. Smriti Nakarmi",
-                    "designation": "Dy. HOD / Associate Professor"
-                },
-                {
-                    "name": "Er. Sagun Manandhar",
-                    "designation": "Research Head / Associate Professor"
-                },
-                {
-                    "name": "Er. Anmol Ratna Bajracharya",
-                    "designation": "IT-Incharge / Research Member / Associate Professor"
-                },
-                {
-                    "name": "Er. Ravi Poudel",
-                    "designation": "1st & 4th year Coordinator / Associate Professor"
-                },
-                {
-                    "name": "Er. Gaurav Gautam",
-                    "designation": "2nd & 3rd year Coordinator / Associate Professor"
-                },
-                {
-                    "name": "Er. Sujan Shrestha",
-                    "designation": "Major Project Coordinator / Associate Professor"
-                },
-                {
-                    "name": "Er. Pushpa Dhamala",
-                    "designation": "Associate Professor"
-                },
-                {
-                    "name": "Dr. Dipen Manandhar",
-                    "designation": "Major Project Coordinator / Lecturer"
-                },
-                {
-                    "name": "Er. Rubi Kumari Mahato",
-                    "designation": "Lab Coordinator / Senior Lecturer"
-                },
-                {
-                    "name": "Er. Dhawa Sang Dong",
-                    "designation": "Research Member / Lecturer"
-                },
-                {
-                    "name": "Er. Sarina Barahi",
-                    "designation": "Lecturer"
-                }
-            ]
+            "id": "faq_005",
+            "question": "How long are the Bachelor's programs at KEC?",
+            "answer": "All Bachelor of Engineering programs (Civil, Computer, Electrical, Electronics & Communication) are 4 years. Bachelor of Architecture is 5 years.",
+            "category": "academics"
         },
         {
-            "department": "Department of Applied Sciences",
-            "hod": "Mr. Shankar Parajuli",
-            "hod_email": "shankar.parajuli@kecktm.edu.np",
-            "faculty": [
-                {
-                    "name": "Mr. Shankar Parajuli",
-                    "designation": "HOD / Associate Professor"
-                },
-                {
-                    "name": "Mr. Yadab Gaire",
-                    "designation": "Dy. HOD / Associate Professor"
-                },
-                {
-                    "name": "Mr. Subash Pokhrel",
-                    "designation": "Chief, Guidance & Counselling"
-                },
-                {
-                    "name": "Mr. Anjeeb Lal Shrestha",
-                    "designation": "Exam Chief / Associate Professor"
-                },
-                {
-                    "name": "Ms. Swastika Lama Yonjan",
-                    "designation": "Associate Professor"
-                },
-                {
-                    "name": "Mr. Dev Raj Khatri",
-                    "designation": "Senior Lecturer"
-                },
-                {
-                    "name": "Mr. Yogendra Parajuli Thapa",
-                    "designation": "Senior Lecturer"
-                },
-                {
-                    "name": "Ms. Anjana Bhele Shrestha",
-                    "designation": "Senior Lecturer"
-                }
-            ],
-            "note": "This department teaches foundational subjects (Math, Physics, Chemistry, English, Nepali) across all engineering programs; it supports the five main departments rather than running its own degree."
+            "id": "faq_006",
+            "question": "Which university is KEC affiliated with?",
+            "answer": "KEC is affiliated with Tribhuvan University (TU), and its engineering entrance exam is conducted by the Institute of Engineering (IOE), TU.",
+            "category": "academics"
         },
         {
-            "department": "Department of Mechanical Engineering",
-            "hod": "Dr. Lila Raj Koirala",
-            "hod_email": "lila.koirala@kecktm.edu.np",
-            "faculty": [
-                {
-                    "name": "Dr. Lila Raj Koirala",
-                    "designation": "HOD / Associate Professor"
-                },
-                {
-                    "name": "Er. Bishal Pudasaini",
-                    "designation": "Lecturer"
-                }
-            ],
-            "note": "This is a supporting department (teaches Thermodynamics, Engineering Drawing, Workshop Technology etc. as service courses) — KEC does not run a standalone Mechanical Engineering degree."
-        }
-    ],
-    "administration": [
-        {
-            "name": "Prof. Er. Hirendra Man Pradhan",
-            "designation": "Chairman / Principal"
+            "id": "faq_007",
+            "question": "What is the admission procedure at KEC?",
+            "answer": "Admission for engineering programs is based on the IOE entrance examination conducted by Tribhuvan University's Institute of Engineering. For Architecture, applicants must appear in a separate aptitude test conducted by the college. A personal interview with college management, along with parents, is compulsory for all applicants.",
+            "category": "admission"
         },
         {
-            "name": "Mr. Rajendra Shakya",
-            "designation": "Managing Director"
+            "id": "faq_008",
+            "question": "What are the minimum eligibility requirements for BE programs?",
+            "answer": "Applicants need a minimum of 45% marks in +2 Science (or A-Level, or Diploma in Engineering, or equivalent) with Physics, Chemistry, and two papers of Mathematics, plus a passing score on the IOE entrance test.",
+            "category": "admission"
         },
         {
-            "name": "Associate Prof. Shailita Manandhar Joshi",
-            "designation": "Vice Principal"
+            "id": "faq_009",
+            "question": "How do I apply for admission to KEC?",
+            "answer": "Applications can be submitted online through onlineform.kecktm.edu.np, or through an authorized education agent. A separate application processing fee is required (paid via bank deposit or e-Sewa) before the form is considered complete.",
+            "category": "admission"
         },
         {
-            "name": "Mr. Suresh Pd. Chaudhary",
-            "designation": "Chief Administrator"
+            "id": "faq_010",
+            "question": "When does the main admission intake happen?",
+            "answer": "The main intake at KEC is typically in Mangsir (mid-November to mid-December), following the annual IOE entrance exam cycle.",
+            "category": "admission"
         },
         {
-            "name": "Associate Prof. Anjeeb Lal Shrestha",
-            "designation": "Chief, Exam Section"
+            "id": "faq_011",
+            "question": "Does KEC offer scholarships?",
+            "answer": "Yes. KEC offers scholarships on a need-cum-merit basis. Per IOE guidelines, 10% of total student intake is eligible for full (100%) scholarships. The college also gives merit scholarships to students who score well on the KEC Model Entrance exam, plus special scholarships for female students and students excelling in extracurricular activities.",
+            "category": "admission"
         },
         {
-            "name": "Associate Prof. Subash Pokhrel",
-            "designation": "Guidance & Counselling Chief"
+            "id": "faq_012",
+            "question": "Does KEC have hostel facilities?",
+            "answer": "Yes. KEC runs an on-campus hostel with single, double, triple, and quadruple rooms, each with a closet, table, bed, and chair, plus 24/7 security including wardens and guards. Separate hostel arrangements are made for girls. Hygienic food is available at the hostel and cafeteria at reasonable prices.",
+            "category": "facilities"
         },
         {
-            "name": "Ms. Bijeta Poudel",
-            "designation": "Senior Account Officer"
-        }
-    ],
-    "faq_style": [
-        {
-            "question": "Who is the HOD of the Computer Engineering department at KEC?",
-            "answer": "Er. Sudeep Shakya is the Head of the Department (HOD) of Computer Engineering at KEC. He can be reached at sudeep.shakya@kecktm.edu.np."
+            "id": "faq_013",
+            "question": "What library facilities does KEC provide?",
+            "answer": "KEC has a comprehensive library with over 50,000 books, reference materials, journals, newspapers, and magazines, with separate sections for each engineering discipline. It also offers e-learning resources through an FTP-based digital archive.",
+            "category": "facilities"
         },
         {
-            "question": "Who is the HOD of the Civil Engineering department at KEC?",
-            "answer": "Er. Arjun Poudel is the Head of the Department (HOD) of Civil Engineering at KEC. He can be reached at arjun.poudel@kecktm.edu.np."
+            "id": "faq_014",
+            "question": "What co-curricular activities does KEC offer?",
+            "answer": "KEC offers co-curricular activities including debating, elocution, essay writing, painting, drama, project work, and excursions.",
+            "category": "student_life"
         },
         {
-            "question": "Who is the HOD of the Electrical Engineering department at KEC?",
-            "answer": "Er. Binod Bhandari is the Head of the Department (HOD) of Electrical Engineering at KEC."
+            "id": "faq_015",
+            "question": "What transport facilities does KEC provide?",
+            "answer": "KEC offers subsidized transportation facilities from most parts of Kathmandu Valley for its students, in addition to the regular public transport already serving the Kalimati area.",
+            "category": "facilities"
         },
         {
-            "question": "Who is the HOD of the Electronics, Communication and Information Engineering department at KEC?",
-            "answer": "Er. Suramya Sharma Dahal is the Head of the Department (HOD) of Electronics, Communication and Information Engineering at KEC. She can be reached at suramya.dahal@kecktm.edu.np."
+            "id": "faq_016",
+            "question": "What research activities does KEC conduct?",
+            "answer": "KEC established its Office of Research and Publications (OKRP) in January 2013 to promote research and academic writing among staff and students. The office publishes the 'KEC Journal of Science and Engineering' (KJSE) and organizes seminars and presentations across departments.",
+            "category": "academics"
         },
         {
-            "question": "Who is the HOD of the Architecture department at KEC?",
-            "answer": "Ar. Moon Singh Dongol is the Head of the Department (HOD) of Architecture at KEC. He can be reached at moon.dongol@kecktm.edu.np."
+            "id": "faq_017",
+            "question": "How can I contact KEC's admission office?",
+            "answer": "You can contact KEC's administrative office for details on courses, admissions, fees, scholarships, and facilities. Contact numbers found in public listings vary (e.g., 01-4284902 / 01-4276130 and 01-5302239 / 01-5376130 appear in different sources) — confirm the current number directly via the official website before publishing it to users.",
+            "category": "contact",
+            "confidence": "low - conflicting sources, verify before use"
         },
         {
-            "question": "Who is the Principal of KEC?",
-            "answer": "Prof. Er. Hirendra Man Pradhan is the Chairman/Principal of Kathmandu Engineering College."
+            "id": "faq_018",
+            "question": "What is the campus size of KEC?",
+            "answer": "The KEC compound spans about 30 ropanis of leased and owned land across Kalimati and Dahachok, and includes departments, a library, a student amenities centre, a multipurpose hall, an administrative block, and specialized labs.",
+            "category": "general"
         },
         {
-            "question": "Who is the Vice Principal of KEC?",
-            "answer": "Associate Prof. Shailita Manandhar Joshi is the Vice Principal of Kathmandu Engineering College."
+            "id": "faq_019",
+            "question": "Does KEC provide student loans or payment plans?",
+            "answer": "KEC collaborates with banks to offer student loans and flexible payment plans for families requiring financial assistance with tuition.",
+            "category": "admission"
         },
         {
-            "question": "Who is the Managing Director of KEC?",
-            "answer": "Mr. Rajendra Shakya is the Managing Director of Kathmandu Engineering College."
+            "id": "faq_020",
+            "question": "How many seats are available in each BE program?",
+            "answer": "Historically, seat numbers reported for KEC have included approximately 96 seats in Civil Engineering, 96 in Computer Engineering, 48 in Electrical Engineering, and 96 in Electronics, Communication & Information Engineering — but exact seat counts change year to year, so confirm current numbers from the latest admission notice.",
+            "category": "admission",
+            "confidence": "medium - based on a specific past intake cycle, verify current year"
         }
     ]
 }

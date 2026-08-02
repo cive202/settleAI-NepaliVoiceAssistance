@@ -110,6 +110,31 @@ class RAGService:
             for (q, a), s, i in zip(pairs, sources, ids)
         ]
 
+    def add_faq_batch(self, faqs: list[dict]) -> list[dict]:
+        """Store FAQ entries (see faq.json) tagged with is_faq=True, so
+        retrieve_context() can search these first and treat a confident
+        match as authoritative before falling back to general scraped-page
+        retrieval.
+
+        Ids are deterministic (derived from each entry's own "id" field),
+        so re-ingesting the same faq.json — e.g. every fresh Colab session,
+        where chroma_db doesn't persist — upserts instead of duplicating.
+        """
+        docs = []
+        ids = []
+        for faq in faqs:
+            source = f"faq:{faq['id']}"
+            ids.append(source)
+            docs.append(
+                Document(
+                    page_content=f"Q: {faq['question']}\nA: {faq['answer']}",
+                    metadata={"source": source, "start_index": 0, "is_faq": True},
+                )
+            )
+        if docs:
+            self._store.add_documents(docs, ids=ids)
+        return [{"id": i, "question": f["question"]} for i, f in zip(ids, faqs)]
+
     def add_texts(self, items: list[tuple[str, str]]) -> list[dict]:
         """Store arbitrary text as its own retrievable page, keyed by an explicit source.
 
@@ -165,6 +190,20 @@ class RAGService:
         """
         with timed("rag.translate"):
             search_query = self._translate_to_english(question)
+
+        # FAQ entries are curated/verified, unlike scraped pages, so a
+        # confident FAQ match wins outright without even running the general
+        # search below. Below RAG_CONFIDENT, fall through — don't return
+        # None here, since a weak FAQ match shouldn't override what might
+        # still be a solid general-page match.
+        with timed("rag.faq_search"):
+            faq_scored = self._store.similarity_search_with_relevance_scores(
+                search_query, k=1, filter={"is_faq": True}
+            )
+        if faq_scored and faq_scored[0][1] >= RAG_CONFIDENT:
+            doc, _score = faq_scored[0]
+            return doc.page_content, [doc.metadata.get("source", "")]
+
         with timed("rag.similarity_search"):
             scored = self._store.similarity_search_with_relevance_scores(
                 search_query, k=RAG_RETRIEVER_K
