@@ -14,7 +14,19 @@ LLM_MODEL = "llama-3.1-8b-instant"
 LLM_BASE_URL = "https://api.groq.com/openai/v1"
 
 # ── ASR ──────────────────────────────────────
-WHISPER_MODEL = "kiranpantha/whisper-large-v3-turbo-nepali"  # HF repo id, used by the local (transformers) ASR fallback
+# ai4bharat/indic-conformer-600m-multilingual (current default local ASR,
+# asr.IndicConformerASR): hybrid CTC+RNNT Conformer-600M covering all 22
+# scheduled Indic languages incl. Nepali. Replaced whisper-large-v3-turbo-
+# nepali as the default after that model consistently mangled code-switched
+# English loanwords (e.g. "कलेज" -> "करेश"/"कलेश" for "college").
+# Gated repo — requires accepting the model's terms while logged in on
+# huggingface.co/ai4bharat/indic-conformer-600m-multilingual, and a matching
+# HF token available locally (`huggingface-cli login` or HF_TOKEN env var).
+ASR_MODEL = "ai4bharat/indic-conformer-600m-multilingual"
+ASR_DECODING = "ctc"  # or "rnnt" — the model supports both; no strong signal
+# yet on which suits this project's audio better, so this is the easy knob.
+
+WHISPER_MODEL = "kiranpantha/whisper-large-v3-turbo-nepali"  # HF repo id, used by asr.WhisperLocalASR (kept as a fallback)
 SAMPLE_RATE = 16000  # Hz — Whisper + Silero both require 16kHz
 ASR_KEY = os.getenv("ASR_KEY")
 # Hosted whisper-large-v3 is only reachable via NVIDIA's gRPC NVCF endpoint

@@ -1,11 +1,22 @@
 -r requirements_api.txt
 
-# Local (offline) ASR fallback — asr/whisper_local.py. Also what api.py's
-# lifespan actually loads (get_asr(type="local")), so despite the name this
-# is required for the running API, not just an offline fallback.
 torch>=2.5
 transformers>=4.46
 accelerate>=1.0
+
+# Local ASR (asr/indic_conformer.py) — ai4bharat/indic-conformer-600m-
+# multilingual, current default (get_asr(type="indic_conformer")). Gated
+# repo: before this will download, log into huggingface.co, accept the
+# model's terms on its page, and make sure a matching token is available
+# locally (`huggingface-cli login` or HF_TOKEN env var).
+onnxruntime==1.20.1
+onnx==1.20.1
+# onnxruntime-gpu==1.20.1  # swap in for onnxruntime above on a CUDA box (e.g. Colab) for GPU decoding
+
+# asr/whisper_local.py — kept as a fallback (get_asr(type="whisper_local")).
+# Mangles code-switched English loanwords more than indic-conformer does
+# (e.g. "कलेज" -> "करेश"/"कलेश" for "college"), which is why it's no longer
+# the default.
 
 # Silero VAD (vad.py) — used both by the CLI demo (test_main.py) and by
 # api.py's /ws/barge-in endpoint. torchaudio is a transitive import of the

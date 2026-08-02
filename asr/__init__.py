@@ -4,6 +4,11 @@ def get_asr(type="nvidia"):
 
         return WhisperNvidiaASR()
 
-    from .whisper_local import WhisperLocalASR
+    if type == "whisper_local":
+        from .whisper_local import WhisperLocalASR
 
-    return WhisperLocalASR()
+        return WhisperLocalASR()
+
+    from .indic_conformer import IndicConformerASR
+
+    return IndicConformerASR()

@@ -91,7 +91,7 @@ _slack_task: asyncio.Task | None = None
 async def lifespan(app: FastAPI):
     global _asr, _llm, _tts, _rag, _vad, _slack_listener, _slack_task
     print("Loading models…")
-    _asr = get_asr(type="local")
+    _asr = get_asr(type="indic_conformer")
     _llm = LLM(api_key=GROQ_API_KEY or "", model=LLM_MODEL, system_prompt=SYSTEM_PROMPT)
     _tts = IndicParlerTTS()
     _rag = RAGService()
