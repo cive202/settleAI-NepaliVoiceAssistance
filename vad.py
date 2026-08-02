@@ -30,6 +30,7 @@ class VAD:
                 model="silero_vad",
                 force_reload=False,
                 verbose=False,
+                trust_repo=True,
             )
             model.eval()
             print("VAD model is ready")
