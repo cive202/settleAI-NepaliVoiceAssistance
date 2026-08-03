@@ -1,0 +1,35 @@
+-r requirements_api.txt
+
+torch>=2.5
+transformers>=4.46
+accelerate>=1.0
+
+# Local ASR (asr/indic_conformer.py) — ai4bharat/indic-conformer-600m-
+# multilingual, current default (get_asr(type="indic_conformer")). Gated
+# repo: before this will download, log into huggingface.co, accept the
+# model's terms on its page, and make sure a matching token is available
+# locally (`huggingface-cli login` or HF_TOKEN env var).
+onnxruntime==1.20.1
+onnx==1.20.1
+# onnxruntime-gpu==1.20.1  # swap in for onnxruntime above on a CUDA box (e.g. Colab) for GPU decoding
+
+# asr/whisper_local.py — kept as a fallback (get_asr(type="whisper_local")).
+# Mangles code-switched English loanwords more than indic-conformer does
+# (e.g. "कलेज" -> "करेश"/"कलेश" for "college"), which is why it's no longer
+# the default.
+
+# Silero VAD (vad.py) — used both by the CLI demo (test_main.py) and by
+# api.py's /ws/barge-in endpoint. torchaudio is a transitive import of the
+# cached snakers4/silero-vad hub module, not used directly.
+torchaudio>=2.5
+
+# Local TTS (tts.py) — IndicParlerTTS (ai4bharat/indic-parler-tts, current
+# default) needs the parler-tts package, installed from GitHub since it's
+# not published to PyPI:
+#   pip install git+https://github.com/huggingface/parler-tts.git
+# It hard-pins transformers==4.46.1 (see its setup.py), which is why the
+# floor above is pinned tight rather than left open — anything newer gets
+# downgraded by this install anyway. Requires Python <=3.13: parler-tts's
+# pinned tokenizers release fails to build on 3.14 (removed CPython C-API
+# symbols in its Rust bindings). soundfile (already in requirements_api.txt)
+# covers WAV encoding for both this and VitsNepaliTTS.

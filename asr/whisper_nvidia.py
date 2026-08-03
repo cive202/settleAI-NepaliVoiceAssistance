@@ -1,8 +1,10 @@
 import logging
 import numpy as np
 import riva.client
+from riva.client.proto import riva_asr_pb2 as rasr
 from .base import ASRBackend
-from config import ASR_KEY, ASR_NVCF_URI, ASR_FUNCTION_ID, SAMPLE_RATE
+from config import ASR_KEY, ASR_NVCF_URI, ASR_FUNCTION_ID, ASR_TIMEOUT_S, SAMPLE_RATE
+from perf import timed
 
 log = logging.getLogger(__name__)
 
@@ -30,7 +32,16 @@ class WhisperNvidiaASR(ASRBackend):
     def transcribe(self, audio_np: np.ndarray) -> str:
         log.debug("Transcribing %.2fs of audio (nvidia)", len(audio_np) / SAMPLE_RATE)
         audio_bytes = (audio_np * 32767).astype(np.int16).tobytes()
-        response = self._service.offline_recognize(audio_bytes, self._config, future=False)
+        # offline_recognize() doesn't expose a timeout, so call the gRPC stub
+        # directly (as offline_recognize does internally) to bound worst-case
+        # latency if the endpoint stalls.
+        request = rasr.RecognizeRequest(config=self._config, audio=audio_bytes)
+        with timed("asr.nvidia_recognize"):
+            response = self._service.stub.Recognize(
+                request,
+                metadata=self._service.auth.get_auth_metadata(),
+                timeout=ASR_TIMEOUT_S,
+            )
         text = "".join(r.alternatives[0].transcript for r in response.results).strip()
         log.debug("Transcription: %r", text)
         return text

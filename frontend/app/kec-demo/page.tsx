@@ -130,7 +130,7 @@ export default function KECDemoPage() {
       {/* Footer */}
       <footer className="bg-slate-900 text-slate-400 text-xs">
         <div className="max-w-6xl mx-auto px-5 py-8 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p>© {new Date().getFullYear()} Kalaiya Engineering College · Demo page for SettleAI widget integration</p>
+          <p>© {new Date().getFullYear()} Kathmandu Engineering College · Demo page for SettleAI widget integration</p>
           <Link href="/" className="hover:text-white transition-colors">
             ← Back to SettleAI
           </Link>

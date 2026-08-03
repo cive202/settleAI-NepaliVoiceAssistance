@@ -9,12 +9,24 @@ from dotenv import load_dotenv
 load_dotenv(".env_local")
 
 # ── API ──────────────────────────────────────
-API_KEY = os.getenv("API_KEY")
-LLM_MODEL = "openai/gpt-oss-120b"
-LLM_BASE_URL = "https://integrate.api.nvidia.com/v1"
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+LLM_MODEL = "llama-3.1-8b-instant"
+LLM_BASE_URL = "https://api.groq.com/openai/v1"
 
 # ── ASR ──────────────────────────────────────
-WHISPER_MODEL = "base"  # tiny | base | small | medium | large
+# ai4bharat/indic-conformer-600m-multilingual (current default local ASR,
+# asr.IndicConformerASR): hybrid CTC+RNNT Conformer-600M covering all 22
+# scheduled Indic languages incl. Nepali. Replaced whisper-large-v3-turbo-
+# nepali as the default after that model consistently mangled code-switched
+# English loanwords (e.g. "कलेज" -> "करेश"/"कलेश" for "college").
+# Gated repo — requires accepting the model's terms while logged in on
+# huggingface.co/ai4bharat/indic-conformer-600m-multilingual, and a matching
+# HF token available locally (`huggingface-cli login` or HF_TOKEN env var).
+ASR_MODEL = "ai4bharat/indic-conformer-600m-multilingual"
+ASR_DECODING = "ctc"  # or "rnnt" — the model supports both; no strong signal
+# yet on which suits this project's audio better, so this is the easy knob.
+
+WHISPER_MODEL = "kiranpantha/whisper-large-v3-turbo-nepali"  # HF repo id, used by asr.WhisperLocalASR (kept as a fallback)
 SAMPLE_RATE = 16000  # Hz — Whisper + Silero both require 16kHz
 ASR_KEY = os.getenv("ASR_KEY")
 # Hosted whisper-large-v3 is only reachable via NVIDIA's gRPC NVCF endpoint
@@ -23,6 +35,7 @@ ASR_KEY = os.getenv("ASR_KEY")
 # if calls start failing.
 ASR_NVCF_URI = "grpc.nvcf.nvidia.com:443"
 ASR_FUNCTION_ID = "b702f636-f60c-4a3d-a6f4-f3568c13bd7d"
+ASR_TIMEOUT_S = 15  # bound worst-case latency if the gRPC endpoint stalls
 
 # ── VAD ──────────────────────────────────────
 CHUNK_MS = 32  # ms per VAD chunk (must be 32ms for 16kHz Silero)
@@ -33,22 +46,39 @@ MIN_SPEECH_DURATION = 0.4  # seconds; shorter = ignored (coughs, noise)
 MAX_SPEECH_DURATION = 30  # seconds; safety cap per turn
 PRE_SPEECH_PADDING_MS = 300  # ms of audio kept before speech starts
 POST_SPEECH_PADDING_MS = 400  # ms of silence appended after speech ends
+BARGE_IN_CONSECUTIVE_FRAMES = 3  # ~96ms of continuous speech required before
+# firing barge-in over /ws/barge-in (debounces single-frame flukes)
 
 # ── LLM ──────────────────────────────────────
 LLM_TEMPERATURE = 0.7
 LLM_MAX_TOKENS = 768
+LLM_MAX_HISTORY_TURNS = 8  # user+assistant pairs kept, beyond which older turns are dropped
+LLM_TIMEOUT_S = 15  # bound worst-case latency if the Groq endpoint stalls
 
 SYSTEM_PROMPT = (
     "तपाईं SettleAI नामक एक सहायक हुनुहुन्छ। सधैं नेपालीमा छोटो र स्पष्ट जवाफ दिनुहोस्। "
     "तपाईंको जवाफ आवाजमा बोलिने भएकोले मार्कडाउन (तालिका, बोल्ड, बुलेट चिन्ह) प्रयोग नगर्नुहोस् "
     "— सामान्य बोलिने वाक्यहरूमा मात्र जवाफ दिनुहोस्।"
 )
+# Pre-written, bypasses live LLM generation entirely (api.py::_find_greeting_reply)
+# — same reasoning as the FAQ answers: a short, warm, self-introducing reply is
+# more reliable pre-written than left to per-request generation, and it's the
+# first thing every user hears, so it's worth getting right every time.
+GREETING_REPLY = (
+    "नमस्ते! म SettleAI हुँ, तपाईंको भ्वाइस असिस्टेन्ट। म तपाईंलाई काठमाडौं "
+    "इन्जिनियरिङ कलेजको बारेमा — जस्तै एडमिसन, प्रोग्राम, फी, स्कलरसिप, र "
+    "फेसिलिटी बारे — प्रश्नको जवाफ दिन मद्दत गर्छु। तपाईंलाई के जान्न मन छ?"
+)
+
 # "You are an assistant called SettleAI. Always reply in Nepali, briefly and clearly.
 #  Your reply is spoken aloud, so don't use markdown (tables, bold, bullets) —
 #  answer only in plain spoken sentences."
 
 # ── RAG ──────────────────────────────────────
 RAG_OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+RAG_OLLAMA_TIMEOUT_S = 60  # bound worst-case latency if the local Ollama daemon stalls;
+# raised from 20s after full retrieval+generation was observed to exceed it on
+# this machine's CPU for llama3.1 (retrieval alone was instant, generation was the slow part)
 RAG_EMBED_MODEL = "nomic-embed-text"  # run: ollama pull nomic-embed-text
 RAG_CHAT_MODEL = "llama3.1"  # run: ollama pull llama3.1
 RAG_PERSIST_DIR = "chroma_db"  # on-disk Chroma persistence directory
@@ -59,6 +89,9 @@ RAG_MAX_DEPTH = 2  # default recursive crawl depth
 RAG_MAX_PAGES = 60  # safety cap on pages per ingest (JS rendering is slow)
 RAG_RETRIEVER_K = 12  # top-k chunks retrieved per query
 RAG_MAX_CONTEXT_PAGES = 5  # cap on distinct pages fully expanded into context
+RAG_CONTEXT_TOKEN_BUDGET = 3000  # approx-token cap on assembled context text, so
+# system prompt + history + context + response stay under Groq's free-tier
+# 6000 TPM limit even when RAG_MAX_CONTEXT_PAGES pages would otherwise blow past it
 
 # Best-match relevance score (0-1) from similarity_search_with_relevance_scores
 # decides how to handle a query:
@@ -71,3 +104,52 @@ RAG_MAX_CONTEXT_PAGES = 5  # cap on distinct pages fully expanded into context
 RAG_LOW_CONFIDENCE = 0.25
 RAG_CONFIDENT = 0.45
 RAG_LLM_TEMPERATURE = 0.0  # factual RAG answers
+
+# ── TTS ──────────────────────────────────────
+# ai4bharat/indic-parler-tts (current default, tts.IndicParlerTTS): a
+# Parler-TTS Mini fine-tune with 21 Indic languages incl. Nepali. Requires
+# `pip install git+https://github.com/huggingface/parler-tts.git`, which
+# hard-pins transformers==4.46.1 — see requirements_local.txt. Voice/rate/
+# tone are steered by TTS_VOICE_DESCRIPTION (a natural-language prompt), not
+# a numeric knob. Roughly 25x slower than VITS on CPU (see
+# TTS_SPEAKING_RATE below for the faster fallback engine).
+TTS_MODEL = "ai4bharat/indic-parler-tts"
+# Matches the model card's own recommended description for the Nepali
+# speaker "Amrita" verbatim (https://huggingface.co/ai4bharat/indic-parler-tts)
+# — deviating from the documented phrasing risks out-of-distribution
+# conditioning, which biased output toward Hindi (Nepali is only 28.65
+# training hours vs. Hindi's 107 in this checkpoint, so some accent bleed
+# may not be fully fixable by prompting alone).
+TTS_VOICE_DESCRIPTION = (
+    "Amrita speaks with a high pitch at a slow pace. Her voice is clear, "
+    "with excellent recording quality and only moderate background noise."
+)
+
+# Parler's decoder is autoregressive over up to generation_config.max_length
+# (2610 frames, ~30s of audio) with do_sample=True, so EOS timing is
+# probabilistic — an unlucky sentence can occasionally run 5-6x longer than
+# a typical one (observed: 67s vs. a normal ~10-12s for similar-length
+# text). tts.py bounds max_new_tokens per call to a generous multiple of the
+# text's expected spoken duration so that tail can't happen, without cutting
+# off sentences that would have stopped naturally anyway.
+TTS_PARLER_FRAME_RATE_HZ = 86.13  # DAC 44.1kHz codec: sampling_rate / hop_length
+TTS_PARLER_CHARS_PER_SEC = 13  # rough Nepali speaking-rate estimate
+TTS_PARLER_DURATION_MARGIN = 2.5  # safety multiplier over the naive estimate
+TTS_PARLER_MIN_DURATION_S = 2.0  # floor so very short sentences still get headroom
+
+# tts.VitsNepaliTTS (atul10/nepali_male_v1) — smaller, faster CPU fallback.
+VITS_TTS_MODEL = "atul10/nepali_male_v1"
+# VitsModel's length_scale = 1.0 / speaking_rate, so <1.0 slows speech down,
+# >1.0 speeds it up. 1.0 is the model's own default pace.
+TTS_SPEAKING_RATE = 1.0
+TTS_TIMEOUT_S = 15  # bound worst-case latency if Google's TTS endpoint stalls (gTTS fallback engine only)
+
+# ── Slack ────────────────────────────────────
+# Live-ingests messages from named Slack channels into the RAG store via
+# Socket Mode, so the voice agent can answer questions grounded in recent
+# Slack traffic without a manual /api/rag/ingest call. See slack_bot/listener.py.
+SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")  # xoxb-... , needs channels:history + channels:read
+SLACK_APP_TOKEN = os.getenv("SLACK_APP_TOKEN")  # xapp-... , needs connections:write (Socket Mode)
+# Comma-separated channel names ("#support,#general") or IDs ("C0123,C0456")
+SLACK_CHANNELS = [c.strip() for c in os.getenv("SLACK_CHANNELS", "").split(",") if c.strip()]
+SLACK_ENABLED = bool(SLACK_BOT_TOKEN and SLACK_APP_TOKEN and SLACK_CHANNELS)

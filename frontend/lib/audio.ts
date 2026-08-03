@@ -13,12 +13,13 @@ export class AudioRecorder {
     return this.stream !== null;
   }
 
-  async start(onVolume?: VolumeCallback): Promise<void> {
-    this.chunks = [];
+  async start(onVolume?: VolumeCallback, seedChunks?: Float32Array[]): Promise<void> {
+    this.chunks = seedChunks ? [...seedChunks] : [];
     this.stream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 },
     });
-    this.audioCtx = new AudioContext();
+    // Request 16kHz directly so the backend can skip librosa resampling on every request.
+    this.audioCtx = new AudioContext({ sampleRate: 16000 });
     this.sampleRate = this.audioCtx.sampleRate;
     this.source = this.audioCtx.createMediaStreamSource(this.stream);
 

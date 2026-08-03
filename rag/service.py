@@ -15,14 +15,25 @@ from langchain_ollama import ChatOllama
 from config import (
     RAG_CHAT_MODEL,
     RAG_CONFIDENT,
+    RAG_CONTEXT_TOKEN_BUDGET,
     RAG_LLM_TEMPERATURE,
     RAG_LOW_CONFIDENCE,
     RAG_MAX_CONTEXT_PAGES,
     RAG_OLLAMA_BASE_URL,
+    RAG_OLLAMA_TIMEOUT_S,
     RAG_RETRIEVER_K,
 )
+from perf import timed
+
 from .scraper import scrape, split
 from .store import get_embeddings, get_vectorstore
+
+_CHARS_PER_TOKEN = 4  # rough heuristic for English/mixed-script scraped web text
+
+
+def _approx_tokens(text: str) -> int:
+    return len(text) // _CHARS_PER_TOKEN
+
 
 _RAG_PROMPT = ChatPromptTemplate.from_messages(
     [
@@ -41,6 +52,7 @@ class RAGService:
             model=RAG_CHAT_MODEL,
             base_url=RAG_OLLAMA_BASE_URL,
             temperature=RAG_LLM_TEMPERATURE,
+            client_kwargs={"timeout": RAG_OLLAMA_TIMEOUT_S},
         )
         self._retriever = self._store.as_retriever(search_kwargs={"k": RAG_RETRIEVER_K})
         combine_docs_chain = create_stuff_documents_chain(self._llm, _RAG_PROMPT)
@@ -48,11 +60,14 @@ class RAGService:
 
     def ingest(self, url: str, max_depth: int) -> dict:
         """Scrape, chunk, embed, and store the pages found at `url`."""
-        raw_docs = scrape(url, max_depth=max_depth)
+        with timed("rag.scrape"):
+            raw_docs = scrape(url, max_depth=max_depth)
         if not raw_docs:
             raise ValueError(f"No pages found at {url} (max_depth={max_depth})")
-        chunks = split(raw_docs)
-        ids = self._store.add_documents(chunks)
+        with timed("rag.split"):
+            chunks = split(raw_docs)
+        with timed("rag.embed_and_store"):
+            ids = self._store.add_documents(chunks)
         return {
             "url": url,
             "max_depth": max_depth,
@@ -69,17 +84,122 @@ class RAGService:
         chunks by source and reassembles the full page) treats it exactly
         like a scraped page.
         """
-        source = f"manual-qa:{uuid.uuid4().hex}"
-        doc = Document(
-            page_content=f"Q: {question}\nA: {answer}",
-            metadata={"source": source, "start_index": 0},
-        )
-        ids = self._store.add_documents([doc])
-        return {"question": question, "answer": answer, "source": source, "id": ids[0]}
+        return self.add_qa_batch([(question, answer)])[0]
+
+    def add_qa_batch(self, pairs: list[tuple[str, str]]) -> list[dict]:
+        """Like add_qa, but embeds and stores every pair in one round trip.
+
+        Ollama's embedding endpoint is called once per add_documents() call,
+        not once per document, so batching a bulk FAQ import through this
+        instead of looping add_qa() turns N embedding requests into 1.
+        """
+        docs = []
+        sources = []
+        for question, answer in pairs:
+            source = f"manual-qa:{uuid.uuid4().hex}"
+            sources.append(source)
+            docs.append(
+                Document(
+                    page_content=f"Q: {question}\nA: {answer}",
+                    metadata={"source": source, "start_index": 0},
+                )
+            )
+        ids = self._store.add_documents(docs) if docs else []
+        return [
+            {"question": q, "answer": a, "source": s, "id": i}
+            for (q, a), s, i in zip(pairs, sources, ids)
+        ]
+
+    def add_faq_batch(self, faqs: list[dict]) -> list[dict]:
+        """Store FAQ entries (see faq.json) tagged with is_faq=True, so
+        get_faq_answer() can search these first and return a confident
+        match's pre-written answer_ne directly — bypassing live LLM
+        generation entirely for these curated questions.
+
+        Ids are deterministic (derived from each entry's own "id" field),
+        so re-ingesting the same faq.json — e.g. every fresh Colab session,
+        where chroma_db doesn't persist — upserts instead of duplicating.
+        """
+        docs = []
+        ids = []
+        for faq in faqs:
+            source = f"faq:{faq['id']}"
+            ids.append(source)
+            docs.append(
+                Document(
+                    # page_content keeps the "Q: ... A: ..." shape for
+                    # embedding quality (matches how the question itself
+                    # gets asked); answer_ne is the pre-written Nepali
+                    # answer get_faq_answer() returns directly on a
+                    # confident match.
+                    page_content=f"Q: {faq['question']}\nA: {faq['answer']}",
+                    metadata={
+                        "source": source,
+                        "start_index": 0,
+                        "is_faq": True,
+                        "answer_ne": faq["answer_ne"],
+                    },
+                )
+            )
+        if docs:
+            self._store.add_documents(docs, ids=ids)
+        return [{"id": i, "question": f["question"]} for i, f in zip(ids, faqs)]
+
+    def get_faq_answer(self, question: str) -> dict | None:
+        """Direct-answer FAQ lookup — returns a confident match's
+        pre-written Nepali answer, or None if no FAQ entry is a close
+        enough match.
+
+        Bypasses retrieve_context()/the main LLM entirely: faq.json answers
+        are hand-translated and verified, so there's no live English-to-
+        Nepali paraphrase step for the LLM to garble grammar in, or drift
+        into asking a question back instead of answering (both observed in
+        testing when the raw "Q:...A:..." context was handed to the LLM to
+        rephrase — see git history on this method).
+        """
+        with timed("faq.translate"):
+            search_query = self._translate_to_english(question)
+        with timed("faq.similarity_search"):
+            scored = self._store.similarity_search_with_relevance_scores(
+                search_query, k=1, filter={"is_faq": True}
+            )
+        if not scored or scored[0][1] < RAG_CONFIDENT:
+            return None
+        doc, score = scored[0]
+        return {
+            "answer": doc.metadata.get("answer_ne", ""),
+            "source": doc.metadata.get("source", ""),
+            "score": score,
+        }
+
+    def add_texts(self, items: list[tuple[str, str]]) -> list[dict]:
+        """Store arbitrary text as its own retrievable page, keyed by an explicit source.
+
+        Unlike add_qa_batch (which wraps pairs in a "Q: ... A: ..." template),
+        text is stored verbatim — for content that already reads naturally on
+        its own, e.g. Slack messages (see slack_bot/listener.py).
+        """
+        docs = [
+            Document(page_content=text, metadata={"source": source, "start_index": 0})
+            for text, source in items
+        ]
+        ids = self._store.add_documents(docs) if docs else []
+        return [{"text": t, "source": s, "id": i} for (t, s), i in zip(items, ids)]
+
+    def embed_query(self, text: str) -> list[float]:
+        """Embed `text` directly, with no translation step.
+
+        Used for the answer-cache similarity check (api.py), not for document
+        retrieval — that path needs the translation in retrieve_context() to
+        match well against the English doc store, but comparing a Nepali
+        question against previously-cached Nepali questions doesn't.
+        """
+        return self._embeddings.embed_query(text)
 
     def query(self, question: str) -> dict:
         """Answer `question` using only previously ingested context."""
-        result = self._chain.invoke({"input": question})
+        with timed("rag.chain_invoke"):
+            result = self._chain.invoke({"input": question})
         sources = sorted({d.metadata.get("source", "") for d in result.get("context", [])})
         return {"answer": result["answer"], "sources": sources}
 
@@ -105,10 +225,12 @@ class RAGService:
         order) — the LLM sees whole pages instead of a partial slice of one, while
         the page cap keeps the prompt from ballooning when many pages match.
         """
-        search_query = self._translate_to_english(question)
-        scored = self._store.similarity_search_with_relevance_scores(
-            search_query, k=RAG_RETRIEVER_K
-        )
+        with timed("rag.translate"):
+            search_query = self._translate_to_english(question)
+        with timed("rag.similarity_search"):
+            scored = self._store.similarity_search_with_relevance_scores(
+                search_query, k=RAG_RETRIEVER_K
+            )
         if not scored:
             return "", []
 
@@ -123,16 +245,36 @@ class RAGService:
                 sources.append(source)
         sources = sources[:RAG_MAX_CONTEXT_PAGES]
 
-        page_texts = []
-        for source in sources:
-            result = self._store.get(where={"source": source}, include=["documents", "metadatas"])
-            ordered = sorted(
-                zip(result["documents"], result["metadatas"]),
-                key=lambda pair: pair[1].get("start_index", 0),
+        with timed("rag.fetch_pages"):
+            result = self._store.get(
+                where={"source": {"$in": sources}}, include=["documents", "metadatas"]
             )
-            page_texts.append("\n".join(text for text, _ in ordered))
+            chunks_by_source: dict[str, list[tuple[str, dict]]] = {s: [] for s in sources}
+            for text, metadata in zip(result["documents"], result["metadatas"]):
+                chunks_by_source[metadata.get("source", "")].append((text, metadata))
 
-        return "\n\n".join(page_texts), sources
+            page_texts = []
+            budget = RAG_CONTEXT_TOKEN_BUDGET
+            used_sources = []
+            for source in sources:
+                ordered = sorted(
+                    chunks_by_source[source], key=lambda pair: pair[1].get("start_index", 0)
+                )
+                page_text = "\n".join(text for text, _ in ordered)
+                page_tokens = _approx_tokens(page_text)
+                if page_tokens > budget:
+                    if not page_texts:
+                        # Even the single highest-ranked page alone exceeds the
+                        # budget — truncate it rather than return no context at all.
+                        page_text = page_text[: budget * _CHARS_PER_TOKEN]
+                        page_texts.append(page_text)
+                        used_sources.append(source)
+                    break
+                page_texts.append(page_text)
+                used_sources.append(source)
+                budget -= page_tokens
+
+        return "\n\n".join(page_texts), used_sources
 
     def _translate_to_english(self, text: str) -> str:
         # Asking the local model to "translate" already-English text into English

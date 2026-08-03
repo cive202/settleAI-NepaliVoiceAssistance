@@ -1,0 +1,151 @@
+{
+    "source_note": "kecktm.edu.np is a client-rendered SPA (JS required) — could not be scraped with plain HTTP fetch. This dataset was compiled from secondary sources: an official KEC FAQ mirrored on virtualedufairnepal.com, plus collegenp.com, collegeinfonepal.com, and studyinfocentre.com listings. Phone numbers and fees vary across sources — verify against onlineform.kecktm.edu.np or by calling before using in production. Recommend re-scraping the live site with Playwright/Puppeteer for authoritative, current data. answer_ne fields are hand-translated for direct TTS use (see rag/service.py::get_faq_answer) in a natural spoken code-switched register (English loanwords for common terms — students, college, admission, scholarship, etc. — Nepali grammar/particles), not formal literary Nepali. Re-verify if answer (English) is ever edited, since the two are not auto-synced.",
+    "metadata": {
+        "type": "faq",
+        "institution": "Kathmandu Engineering College (KEC)"
+    },
+    "faqs": [
+        {
+            "id": "faq_001",
+            "question": "What is Kathmandu Engineering College?",
+            "answer": "Kathmandu Engineering College (KEC) is a private, Tribhuvan University (TU)-affiliated engineering college established in 1998, located at Kalimati, Kathmandu. It was the first ISO 9001:2008 certified college in Nepal.",
+            "answer_ne": "काठमाडौं इन्जिनियरिङ कलेज (केईसी) त्रिभुवन युनिभर्सिटीसँग एफिलिएटेड एउटा प्राइभेट इन्जिनियरिङ कलेज हो, जुन सन् १९९८ मा स्थापना भएको थियो र काठमाडौंको कालिमाटीमा छ। यो नेपालको पहिलो आईएसओ ९००१:२००८ सर्टिफाइड कलेज थियो।",
+            "category": "general"
+        },
+        {
+            "id": "faq_002",
+            "question": "Where is KEC located?",
+            "answer": "KEC is located at Ganeshman Singh Road, Kalimati, Kathmandu Metropolitan City, Nepal.",
+            "answer_ne": "केईसी काठमाडौं मेट्रोपोलिटन सिटीको कालिमाटीमा रहेको गणेशमान सिंह मार्गमा छ।",
+            "category": "general"
+        },
+        {
+            "id": "faq_003",
+            "question": "How can I reach the college?",
+            "answer": "The college is served by regular public transport including buses, micro-vans, and tempos, as it is located on the main road at Kalimati, Kathmandu.",
+            "answer_ne": "कलेज कालिमाटीको मेन रोडमै भएकोले बस, माइक्रो, र टेम्पो जस्ता पब्लिक ट्रान्सपोर्टबाट सजिलै पुग्न सकिन्छ।",
+            "category": "general"
+        },
+        {
+            "id": "faq_004",
+            "question": "What programs does KEC offer?",
+            "answer": "KEC offers five Bachelor's level programs: Bachelor of Architecture (B.Arch.), Bachelor of Civil Engineering (BE Civil), Bachelor of Computer Engineering (BCE), Bachelor of Electrical Engineering (BEE), and Bachelor of Electronics, Communication and Information Engineering (BEI).",
+            "answer_ne": "केईसीमा पाँच वटा ब्याचलर लेभलका प्रोग्राम छन्: आर्किटेक्चर, सिभिल इन्जिनियरिङ, कम्प्युटर इन्जिनियरिङ, इलेक्ट्रिकल इन्जिनियरिङ, र इलेक्ट्रोनिक्स तथा कम्युनिकेसन इन्जिनियरिङ।",
+            "category": "academics"
+        },
+        {
+            "id": "faq_005",
+            "question": "How long are the Bachelor's programs at KEC?",
+            "answer": "All Bachelor of Engineering programs (Civil, Computer, Electrical, Electronics & Communication) are 4 years. Bachelor of Architecture is 5 years.",
+            "answer_ne": "सबै इन्जिनियरिङ प्रोग्राम — सिभिल, कम्प्युटर, इलेक्ट्रिकल, र इलेक्ट्रोनिक्स तथा कम्युनिकेसन — चार वर्षका हुन्छन्। आर्किटेक्चर प्रोग्राम भने पाँच वर्षको हुन्छ।",
+            "category": "academics"
+        },
+        {
+            "id": "faq_006",
+            "question": "Which university is KEC affiliated with?",
+            "answer": "KEC is affiliated with Tribhuvan University (TU), and its engineering entrance exam is conducted by the Institute of Engineering (IOE), TU.",
+            "answer_ne": "केईसी त्रिभुवन युनिभर्सिटीसँग एफिलिएटेड छ, र यसको इन्जिनियरिङ एन्ट्रान्स एक्जाम आईओईले लिन्छ।",
+            "category": "academics"
+        },
+        {
+            "id": "faq_007",
+            "question": "What is the admission procedure at KEC?",
+            "answer": "Admission for engineering programs is based on the IOE entrance examination conducted by Tribhuvan University's Institute of Engineering. For Architecture, applicants must appear in a separate aptitude test conducted by the college. A personal interview with college management, along with parents, is compulsory for all applicants.",
+            "answer_ne": "इन्जिनियरिङ प्रोग्रामको एडमिसन आईओईको एन्ट्रान्स एक्जामको रिजल्टको आधारमा हुन्छ। आर्किटेक्चरका लागि भने कलेजले नै छुट्टै एप्टिच्युड टेस्ट लिन्छ। सबै स्टुडेन्टले पेरेन्ट्ससहित कलेज म्यानेजमेन्टसँग इन्टरभ्यू दिनुपर्छ।",
+            "category": "admission"
+        },
+        {
+            "id": "faq_008",
+            "question": "What are the minimum eligibility requirements for BE programs?",
+            "answer": "Applicants need a minimum of 45% marks in +2 Science (or A-Level, or Diploma in Engineering, or equivalent) with Physics, Chemistry, and two papers of Mathematics, plus a passing score on the IOE entrance test.",
+            "answer_ne": "स्टुडेन्टहरूले फिजिक्स, केमिस्ट्री, र दुई पेपर म्याथसहित प्लस टु साइन्समा (वा ए-लेभल, वा इन्जिनियरिङ डिप्लोमा) कम्तीमा ४५ पर्सेन्ट ल्याएको हुनुपर्छ, अनि आईओई एन्ट्रान्स पास गरेको हुनुपर्छ।",
+            "category": "admission"
+        },
+        {
+            "id": "faq_009",
+            "question": "How do I apply for admission to KEC?",
+            "answer": "Applications can be submitted online through onlineform.kecktm.edu.np, or through an authorized education agent. A separate application processing fee is required (paid via bank deposit or e-Sewa) before the form is considered complete.",
+            "answer_ne": "एप्लिकेसन onlineform.kecktm.edu.np बाट अनलाइन वा अथोराइज्ड एजुकेसन एजेन्टमार्फत दिन सकिन्छ। फर्म पूरा हुनलाई बैंक भौचर वा ई-सेवाबाट एप्लिकेसन फी तिर्नुपर्छ।",
+            "category": "admission"
+        },
+        {
+            "id": "faq_010",
+            "question": "When does the main admission intake happen?",
+            "answer": "The main intake at KEC is typically in Mangsir (mid-November to mid-December), following the annual IOE entrance exam cycle.",
+            "answer_ne": "केईसीको मेन इन्टेक सामान्यतया मंसिरमा हुन्छ, आईओईको वार्षिक एन्ट्रान्स एक्जाम पछि।",
+            "category": "admission"
+        },
+        {
+            "id": "faq_011",
+            "question": "Does KEC offer scholarships?",
+            "answer": "Yes. KEC offers scholarships on a need-cum-merit basis. Per IOE guidelines, 10% of total student intake is eligible for full (100%) scholarships. The college also gives merit scholarships to students who score well on the KEC Model Entrance exam, plus special scholarships for female students and students excelling in extracurricular activities.",
+            "answer_ne": "हो, केईसीले नीड र मेरिटको आधारमा स्कलरसिप दिन्छ। आईओईको नियमअनुसार टोटल इन्टेकको १० पर्सेन्ट स्टुडेन्टले फुल स्कलरसिप पाउँछन्। केईसी मोडेल एन्ट्रान्समा राम्रो गर्ने स्टुडेन्टलाई मेरिट स्कलरसिप पनि दिइन्छ, साथै छात्रा र एक्स्ट्राकरिकुलरमा राम्रो गर्ने स्टुडेन्टका लागि स्पेसल स्कलरसिप पनि छ।",
+            "category": "admission"
+        },
+        {
+            "id": "faq_012",
+            "question": "Does KEC have hostel facilities?",
+            "answer": "Yes. KEC runs an on-campus hostel with single, double, triple, and quadruple rooms, each with a closet, table, bed, and chair, plus 24/7 security including wardens and guards. Separate hostel arrangements are made for girls. Hygienic food is available at the hostel and cafeteria at reasonable prices.",
+            "answer_ne": "हो, केईसीको आफ्नै हस्टेल छ, जसमा सिंगल देखि चार जनासम्मका रुम छन्, हरेकमा दराज, टेबल, बेड, र कुर्सी हुन्छ, अनि चौबीसै घण्टा सेक्युरिटी हुन्छ। छात्राका लागि छुट्टै हस्टेलको व्यवस्था छ। हस्टेल र क्यान्टिनमा राम्रो प्राइसमा हाइजिनिक खाना पाइन्छ।",
+            "category": "facilities"
+        },
+        {
+            "id": "faq_013",
+            "question": "What library facilities does KEC provide?",
+            "answer": "KEC has a comprehensive library with over 50,000 books, reference materials, journals, newspapers, and magazines, with separate sections for each engineering discipline. It also offers e-learning resources through an FTP-based digital archive.",
+            "answer_ne": "केईसीको लाइब्रेरीमा पचास हजारभन्दा बढी किताब, रेफरेन्स म्याटेरियल, जर्नल, न्युजपेपर, र म्यागजिन छन्, हरेक इन्जिनियरिङ विषयका लागि छुट्टै सेक्सनसहित। यसले डिजिटल आर्काइभमार्फत ई-लर्निङ रिसोर्स पनि दिन्छ।",
+            "category": "facilities"
+        },
+        {
+            "id": "faq_014",
+            "question": "What co-curricular activities does KEC offer?",
+            "answer": "KEC offers co-curricular activities including debating, elocution, essay writing, painting, drama, project work, and excursions.",
+            "answer_ne": "केईसीमा डिबेट, वक्तृत्वकला, निबन्ध लेखन, चित्रकला, नाटक, प्रोजेक्ट वर्क, र एक्स्करसन जस्ता को-करिकुलर एक्टिभिटी हुन्छन्।",
+            "category": "student_life"
+        },
+        {
+            "id": "faq_015",
+            "question": "What transport facilities does KEC provide?",
+            "answer": "KEC offers subsidized transportation facilities from most parts of Kathmandu Valley for its students, in addition to the regular public transport already serving the Kalimati area.",
+            "answer_ne": "केईसीले काठमाडौं भ्याली भरिबाट स्टुडेन्टका लागि सब्सिडाइज्ड ट्रान्सपोर्ट सुविधा दिन्छ, साथै कालिमाटी एरियामा रेगुलर पब्लिक ट्रान्सपोर्ट पनि छँदैछ।",
+            "category": "facilities"
+        },
+        {
+            "id": "faq_016",
+            "question": "What research activities does KEC conduct?",
+            "answer": "KEC established its Office of Research and Publications (OKRP) in January 2013 to promote research and academic writing among staff and students. The office publishes the 'KEC Journal of Science and Engineering' (KJSE) and organizes seminars and presentations across departments.",
+            "answer_ne": "केईसीले जनवरी २०१३ मा रिसर्च तथा पब्लिकेसन अफिस (ओकेआरपी) खोलेको थियो, जसले स्टाफ र स्टुडेन्टबीच रिसर्च तथा एकेडेमिक राइटिङलाई प्रमोट गर्छ। यसले 'केईसी जर्नल अफ साइन्स एन्ड इन्जिनियरिङ' पब्लिस गर्छ र विभिन्न डिपार्टमेन्टमा सेमिनार तथा प्रजेन्टेसन गराउँछ।",
+            "category": "academics"
+        },
+        {
+            "id": "faq_017",
+            "question": "How can I contact KEC's admission office?",
+            "answer": "You can contact KEC's administrative office for details on courses, admissions, fees, scholarships, and facilities. Contact numbers found in public listings vary (e.g., 01-4284902 / 01-4276130 and 01-5302239 / 01-5376130 appear in different sources) — confirm the current number directly via the official website before publishing it to users.",
+            "answer_ne": "कोर्स, एडमिसन, फी, स्कलरसिप, र फेसिलिटीको डिटेलका लागि केईसीको एडमिनिस्ट्रेटिभ अफिसमा सम्पर्क गर्न सकिन्छ। फोन नम्बर सोर्सअनुसार फरक-फरक देखिएकाले, अफिसियल वेबसाइटबाट हालको नम्बर कन्फर्म गर्नुहोस्।",
+            "category": "contact",
+            "confidence": "low - conflicting sources, verify before use"
+        },
+        {
+            "id": "faq_018",
+            "question": "What is the campus size of KEC?",
+            "answer": "The KEC compound spans about 30 ropanis of leased and owned land across Kalimati and Dahachok, and includes departments, a library, a student amenities centre, a multipurpose hall, an administrative block, and specialized labs.",
+            "answer_ne": "केईसीको क्याम्पस कालिमाटी र दहचोकमा गरी करिब ३० रोपनी जग्गामा फैलिएको छ, जसमा विभिन्न डिपार्टमेन्ट, लाइब्रेरी, स्टुडेन्ट एमिनिटिज सेन्टर, मल्टिपर्पस हल, एडमिनिस्ट्रेटिभ भवन, र स्पेसल ल्याबहरू छन्।",
+            "category": "general"
+        },
+        {
+            "id": "faq_019",
+            "question": "Does KEC provide student loans or payment plans?",
+            "answer": "KEC collaborates with banks to offer student loans and flexible payment plans for families requiring financial assistance with tuition.",
+            "answer_ne": "फी तिर्न फाइनान्सियल हेल्प चाहिने फ्यामिलीका लागि केईसीले बैंकहरूसँग मिलेर स्टुडेन्ट लोन र फ्लेक्सिबल पेमेन्ट प्लान दिन्छ।",
+            "category": "admission"
+        },
+        {
+            "id": "faq_020",
+            "question": "How many seats are available in each BE program?",
+            "answer": "Historically, seat numbers reported for KEC have included approximately 96 seats in Civil Engineering, 96 in Computer Engineering, 48 in Electrical Engineering, and 96 in Electronics, Communication & Information Engineering — but exact seat counts change year to year, so confirm current numbers from the latest admission notice.",
+            "answer_ne": "पहिले केईसीमा सिभिल इन्जिनियरिङमा करिब ९६, कम्प्युटर इन्जिनियरिङमा ९६, इलेक्ट्रिकल इन्जिनियरिङमा ४८, र इलेक्ट्रोनिक्स तथा कम्युनिकेसन इन्जिनियरिङमा ९६ सिट रहेको देखिन्छ। तर सिट नम्बर वर्षैपिच्छे फेरिन सक्ने भएकाले, लेटेस्ट एडमिसन नोटिसबाट कन्फर्म गर्नुहोस्।",
+            "category": "admission",
+            "confidence": "medium - based on a specific past intake cycle, verify current year"
+        }
+    ]
+}
