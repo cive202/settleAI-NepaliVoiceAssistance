@@ -112,9 +112,9 @@ class RAGService:
 
     def add_faq_batch(self, faqs: list[dict]) -> list[dict]:
         """Store FAQ entries (see faq.json) tagged with is_faq=True, so
-        retrieve_context() can search these first and treat a confident
-        match as authoritative before falling back to general scraped-page
-        retrieval.
+        get_faq_answer() can search these first and return a confident
+        match's pre-written answer_ne directly — bypassing live LLM
+        generation entirely for these curated questions.
 
         Ids are deterministic (derived from each entry's own "id" field),
         so re-ingesting the same faq.json — e.g. every fresh Colab session,
@@ -127,13 +127,50 @@ class RAGService:
             ids.append(source)
             docs.append(
                 Document(
+                    # page_content keeps the "Q: ... A: ..." shape for
+                    # embedding quality (matches how the question itself
+                    # gets asked); answer_ne is the pre-written Nepali
+                    # answer get_faq_answer() returns directly on a
+                    # confident match.
                     page_content=f"Q: {faq['question']}\nA: {faq['answer']}",
-                    metadata={"source": source, "start_index": 0, "is_faq": True},
+                    metadata={
+                        "source": source,
+                        "start_index": 0,
+                        "is_faq": True,
+                        "answer_ne": faq["answer_ne"],
+                    },
                 )
             )
         if docs:
             self._store.add_documents(docs, ids=ids)
         return [{"id": i, "question": f["question"]} for i, f in zip(ids, faqs)]
+
+    def get_faq_answer(self, question: str) -> dict | None:
+        """Direct-answer FAQ lookup — returns a confident match's
+        pre-written Nepali answer, or None if no FAQ entry is a close
+        enough match.
+
+        Bypasses retrieve_context()/the main LLM entirely: faq.json answers
+        are hand-translated and verified, so there's no live English-to-
+        Nepali paraphrase step for the LLM to garble grammar in, or drift
+        into asking a question back instead of answering (both observed in
+        testing when the raw "Q:...A:..." context was handed to the LLM to
+        rephrase — see git history on this method).
+        """
+        with timed("faq.translate"):
+            search_query = self._translate_to_english(question)
+        with timed("faq.similarity_search"):
+            scored = self._store.similarity_search_with_relevance_scores(
+                search_query, k=1, filter={"is_faq": True}
+            )
+        if not scored or scored[0][1] < RAG_CONFIDENT:
+            return None
+        doc, score = scored[0]
+        return {
+            "answer": doc.metadata.get("answer_ne", ""),
+            "source": doc.metadata.get("source", ""),
+            "score": score,
+        }
 
     def add_texts(self, items: list[tuple[str, str]]) -> list[dict]:
         """Store arbitrary text as its own retrievable page, keyed by an explicit source.
@@ -190,20 +227,6 @@ class RAGService:
         """
         with timed("rag.translate"):
             search_query = self._translate_to_english(question)
-
-        # FAQ entries are curated/verified, unlike scraped pages, so a
-        # confident FAQ match wins outright without even running the general
-        # search below. Below RAG_CONFIDENT, fall through — don't return
-        # None here, since a weak FAQ match shouldn't override what might
-        # still be a solid general-page match.
-        with timed("rag.faq_search"):
-            faq_scored = self._store.similarity_search_with_relevance_scores(
-                search_query, k=1, filter={"is_faq": True}
-            )
-        if faq_scored and faq_scored[0][1] >= RAG_CONFIDENT:
-            doc, _score = faq_scored[0]
-            return doc.page_content, [doc.metadata.get("source", "")]
-
         with timed("rag.similarity_search"):
             scored = self._store.similarity_search_with_relevance_scores(
                 search_query, k=RAG_RETRIEVER_K

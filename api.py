@@ -204,6 +204,20 @@ def _find_cached_answer(user_text: str) -> dict | None:
     return None
 
 
+def _find_faq_answer(user_text: str) -> dict | None:
+    """Return a confident FAQ match's pre-written Nepali answer, or None.
+
+    Checked before the semantic answer cache and before RAG+LLM generation
+    — a confident FAQ hit is authoritative and skips live generation
+    entirely (see RAGService.get_faq_answer).
+    """
+    if _is_greeting(user_text):
+        return None
+    assert _rag
+    with timed("faq.lookup"):
+        return _rag.get_faq_answer(user_text)
+
+
 def _cache_answer(user_text: str, assistant_text: str, sentences: list[dict]) -> None:
     assert _rag
     if len(_ANSWER_CACHE) >= _ANSWER_CACHE_MAX:
@@ -268,6 +282,38 @@ def _stream_cached_reply(user_text: str, cached: dict, transcript: str | None = 
             yield _ndjson_line({"type": "sentence", **sentence})
         _llm.append_turn(user_text, cached["assistant_text"])
     yield _ndjson_line({"type": "done", "assistant_text": cached["assistant_text"]})
+
+
+def _stream_faq_reply(user_text: str, answer: str, transcript: str | None = None):
+    """Sync generator: synthesizes a pre-written FAQ answer directly — no
+    RAG retrieval or LLM generation involved, only TTS. See
+    RAGService.get_faq_answer for why this bypasses the LLM entirely."""
+    assert _llm and _tts
+    if transcript is not None:
+        yield _ndjson_line({"type": "transcript", "text": transcript})
+
+    buffer = answer
+    sentences_for_cache: list[dict] = []
+    while True:
+        sentence, buffer = _pop_sentence(buffer)
+        if sentence is None:
+            break
+        with timed("tts.synthesize"):
+            audio = _tts.synthesize(sentence)
+        entry = {"text": sentence, "audio": base64.b64encode(audio).decode()}
+        sentences_for_cache.append(entry)
+        yield _ndjson_line({"type": "sentence", **entry})
+
+    tail = buffer.strip()
+    if tail:
+        with timed("tts.synthesize"):
+            audio = _tts.synthesize(tail)
+        entry = {"text": tail, "audio": base64.b64encode(audio).decode()}
+        sentences_for_cache.append(entry)
+        yield _ndjson_line({"type": "sentence", **entry})
+
+    _llm.append_turn(user_text, answer)
+    yield _ndjson_line({"type": "done", "assistant_text": answer})
 
 
 def _stream_reply(user_text: str, reply_kwargs: dict, transcript: str | None = None):
@@ -393,6 +439,13 @@ async def process_audio(audio: UploadFile = File(...)):
     if not text:
         raise HTTPException(status_code=422, detail="Nothing transcribed — please try again")
 
+    faq = await asyncio.to_thread(_find_faq_answer, text)
+    if faq is not None:
+        return StreamingResponse(
+            _stream_faq_reply(text, faq["answer"], transcript=text),
+            media_type="application/x-ndjson",
+        )
+
     cached = await asyncio.to_thread(_find_cached_answer, text)
     if cached is not None:
         return StreamingResponse(
@@ -410,6 +463,13 @@ async def process_audio(audio: UploadFile = File(...)):
 @app.post("/api/text")
 async def process_text(body: TextBody):
     assert _llm and _tts and _rag
+    faq = await asyncio.to_thread(_find_faq_answer, body.text)
+    if faq is not None:
+        return StreamingResponse(
+            _stream_faq_reply(body.text, faq["answer"]),
+            media_type="application/x-ndjson",
+        )
+
     cached = await asyncio.to_thread(_find_cached_answer, body.text)
     if cached is not None:
         return StreamingResponse(
