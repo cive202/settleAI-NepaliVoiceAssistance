@@ -64,6 +64,7 @@ from asr import get_asr
 from asr.base import ASRBackend
 from config import (
     BARGE_IN_CONSECUTIVE_FRAMES,
+    GREETING_REPLY,
     GROQ_API_KEY,
     LLM_MODEL,
     RAG_MAX_DEPTH,
@@ -204,6 +205,13 @@ def _find_cached_answer(user_text: str) -> dict | None:
     return None
 
 
+def _find_greeting_reply(user_text: str) -> str | None:
+    """Return the pre-written greeting+introduction reply for a plain
+    greeting, else None. Bypasses live LLM generation for the same reason
+    FAQ answers do — see config.GREETING_REPLY."""
+    return GREETING_REPLY if _is_greeting(user_text) else None
+
+
 def _find_faq_answer(user_text: str) -> dict | None:
     """Return a confident FAQ match's pre-written Nepali answer, or None.
 
@@ -284,10 +292,11 @@ def _stream_cached_reply(user_text: str, cached: dict, transcript: str | None = 
     yield _ndjson_line({"type": "done", "assistant_text": cached["assistant_text"]})
 
 
-def _stream_faq_reply(user_text: str, answer: str, transcript: str | None = None):
-    """Sync generator: synthesizes a pre-written FAQ answer directly — no
-    RAG retrieval or LLM generation involved, only TTS. See
-    RAGService.get_faq_answer for why this bypasses the LLM entirely."""
+def _stream_scripted_reply(user_text: str, answer: str, transcript: str | None = None):
+    """Sync generator: synthesizes a pre-written reply directly (a greeting
+    or a confident FAQ match) — no RAG retrieval or LLM generation
+    involved, only TTS. See config.GREETING_REPLY / RAGService.get_faq_answer
+    for why these bypass the LLM entirely."""
     assert _llm and _tts
     if transcript is not None:
         yield _ndjson_line({"type": "transcript", "text": transcript})
@@ -439,10 +448,17 @@ async def process_audio(audio: UploadFile = File(...)):
     if not text:
         raise HTTPException(status_code=422, detail="Nothing transcribed — please try again")
 
+    greeting = _find_greeting_reply(text)
+    if greeting is not None:
+        return StreamingResponse(
+            _stream_scripted_reply(text, greeting, transcript=text),
+            media_type="application/x-ndjson",
+        )
+
     faq = await asyncio.to_thread(_find_faq_answer, text)
     if faq is not None:
         return StreamingResponse(
-            _stream_faq_reply(text, faq["answer"], transcript=text),
+            _stream_scripted_reply(text, faq["answer"], transcript=text),
             media_type="application/x-ndjson",
         )
 
@@ -463,10 +479,17 @@ async def process_audio(audio: UploadFile = File(...)):
 @app.post("/api/text")
 async def process_text(body: TextBody):
     assert _llm and _tts and _rag
+    greeting = _find_greeting_reply(body.text)
+    if greeting is not None:
+        return StreamingResponse(
+            _stream_scripted_reply(body.text, greeting),
+            media_type="application/x-ndjson",
+        )
+
     faq = await asyncio.to_thread(_find_faq_answer, body.text)
     if faq is not None:
         return StreamingResponse(
-            _stream_faq_reply(body.text, faq["answer"]),
+            _stream_scripted_reply(body.text, faq["answer"]),
             media_type="application/x-ndjson",
         )
 
@@ -524,18 +547,37 @@ async def rag_ingest(body: IngestBody):
     return result
 
 
+# Plain FAQ-shaped files (top-level {"faqs": [{"id", "question", "answer",
+# "answer_ne"}, ...]}) ingested as-is. faculty.json's "faq_style" section is
+# the same shape but lacking "id" — assigned faculty_NNN below since Chroma
+# needs a stable id per entry for add_faq_batch's upsert-by-id.
+_FAQ_FILES = ["faq.json", "electrical.json"]
+
+
+def _load_faq_entries() -> list[dict]:
+    entries: list[dict] = []
+    for path in _FAQ_FILES:
+        with open(path, encoding="utf-8") as f:
+            entries.extend(json.load(f)["faqs"])
+    with open("faculty.json", encoding="utf-8") as f:
+        faculty_data = json.load(f)
+    for i, item in enumerate(faculty_data.get("faq_style", []), start=1):
+        entries.append({**item, "id": item.get("id", f"faculty_{i:03d}")})
+    return entries
+
+
 @app.post("/api/rag/ingest_faq")
 async def rag_ingest_faq():
-    """Ingest the bundled faq.json (repo root) as prioritized FAQ entries —
-    see RAGService.add_faq_batch. Safe to call repeatedly (upserts by id)."""
+    """Ingest all bundled FAQ sources (faq.json, electrical.json,
+    faculty.json's faq_style) as prioritized FAQ entries — see
+    RAGService.add_faq_batch. Safe to call repeatedly (upserts by id)."""
     assert _rag
     try:
         with timed("rag_ingest_faq.total"):
-            with open("faq.json", encoding="utf-8") as f:
-                data = json.load(f)
-            result = await asyncio.to_thread(_rag.add_faq_batch, data["faqs"])
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="faq.json not found in the backend's working directory")
+            entries = await asyncio.to_thread(_load_faq_entries)
+            result = await asyncio.to_thread(_rag.add_faq_batch, entries)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"FAQ source file not found: {exc}")
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"FAQ ingest error: {exc}")
     _ANSWER_CACHE.clear()

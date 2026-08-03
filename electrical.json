@@ -1,5 +1,5 @@
 {
-    "source_note": "The specific URL https://kecktm.edu.np/p/electrical-engineering-brochure-9898 is a JS-rendered SPA page — could not fetch its content or locate its underlying PDF asset via search. These Q&A pairs are instead drawn from the Electrical Engineering section of KEC's official master prospectus PDF (already scraped in this conversation), which covers the same department. If the standalone brochure has content not in the prospectus, it would need Playwright/headless-browser scraping to access.",
+    "source_note": "The specific URL https://kecktm.edu.np/p/electrical-engineering-brochure-9898 is a JS-rendered SPA page — could not fetch its content or locate its underlying PDF asset via search. These Q&A pairs are instead drawn from the Electrical Engineering section of KEC's official master prospectus PDF (already scraped in this conversation), which covers the same department. If the standalone brochure has content not in the prospectus, it would need Playwright/headless-browser scraping to access. answer_ne fields are hand-translated for direct TTS use (see rag/service.py::get_faq_answer) in a natural spoken code-switched register, not formal literary Nepali.",
     "metadata": {
         "type": "faq",
         "institution": "Kathmandu Engineering College (KEC)",
@@ -9,52 +9,62 @@
         {
             "id": "eee_001",
             "question": "What does the Department of Electrical Engineering at KEC offer?",
-            "answer": "KEC's Department of Electrical Engineering offers in-depth analytical treatment of electrical systems, with specialized optional subjects. The department has more than 20 professional faculty members, including visiting professors from the Institute of Engineering (IOE)."
+            "answer": "KEC's Department of Electrical Engineering offers in-depth analytical treatment of electrical systems, with specialized optional subjects. The department has more than 20 professional faculty members, including visiting professors from the Institute of Engineering (IOE).",
+            "answer_ne": "केईसीको इलेक्ट्रिकल इन्जिनियरिङ डिपार्टमेन्टले इलेक्ट्रिकल सिस्टमको डिटेल एनालिटिकल पढाइ दिन्छ, साथै स्पेसलाइज्ड अप्सनल सब्जेक्टहरू पनि छन्। डिपार्टमेन्टमा २० भन्दा बढी प्रोफेसनल फ्याकल्टी छन्, जसमा आईओईबाट आउने भिजिटिङ प्रोफेसरहरू पनि समावेश छन्।"
         },
         {
             "id": "eee_002",
             "question": "Why was the Electrical Engineering department established at KEC?",
-            "answer": "The department was established to meet the rising demand for engineers in power systems, renewable energy technology, and industrial applications. It has well-equipped laboratories and conducts frequent field visits to power stations and manufacturing industries, which students are required to attend and report on."
+            "answer": "The department was established to meet the rising demand for engineers in power systems, renewable energy technology, and industrial applications. It has well-equipped laboratories and conducts frequent field visits to power stations and manufacturing industries, which students are required to attend and report on.",
+            "answer_ne": "पावर सिस्टम, रिन्युएबल एनर्जी टेक्नोलोजी, र इन्डस्ट्रियल एप्लिकेसनमा बढ्दो डिमान्ड पूरा गर्न यो डिपार्टमेन्ट खोलिएको हो। यसमा राम्रा ल्याबहरू छन् र पावर स्टेसन र म्यानुफ्याक्चरिङ इन्डस्ट्रीमा नियमित फिल्ड भिजिट हुन्छ, जुन स्टुडेन्टले अट्टेन्ड गरेर रिपोर्ट गर्नुपर्छ।"
         },
         {
             "id": "eee_003",
             "question": "What career paths are open to Electrical Engineering graduates from KEC?",
-            "answer": "Graduates can pursue careers in the power industry, manufacturing industry, renewable energy sector, and traction systems. Many work for the Nepal Electricity Authority (NEA) and various government ministries, while entrepreneurship is also popular among electrical engineering graduates."
+            "answer": "Graduates can pursue careers in the power industry, manufacturing industry, renewable energy sector, and traction systems. Many work for the Nepal Electricity Authority (NEA) and various government ministries, while entrepreneurship is also popular among electrical engineering graduates.",
+            "answer_ne": "ग्रेजुएटहरूले पावर इन्डस्ट्री, म्यानुफ्याक्चरिङ इन्डस्ट्री, रिन्युएबल एनर्जी सेक्टर, र ट्रयाक्सन सिस्टममा करियर बनाउन सक्छन्। धेरैजसो नेपाल इलेक्ट्रिसिटी अथोरिटी (एनईए) र विभिन्न सरकारी मन्त्रालयमा काम गर्छन्, अनि एन्ट्रप्रेन्योरसिप पनि इलेक्ट्रिकल इन्जिनियरिङ ग्रेजुएटहरूमा लोकप्रिय छ।"
         },
         {
             "id": "eee_004",
             "question": "What lab facilities does the Electrical Engineering department have?",
-            "answer": "The department runs labs including an Electric Circuit Lab, Electric Machines Lab, Instrumentation and Control Systems Lab, Switchgear and Protection Lab, Power Electronics Lab, Electric Drives Lab, and Power Plant Equipment Lab."
+            "answer": "The department runs labs including an Electric Circuit Lab, Electric Machines Lab, Instrumentation and Control Systems Lab, Switchgear and Protection Lab, Power Electronics Lab, Electric Drives Lab, and Power Plant Equipment Lab.",
+            "answer_ne": "डिपार्टमेन्टमा इलेक्ट्रिक सर्किट ल्याब, इलेक्ट्रिक मेसिन्स ल्याब, इन्स्ट्रुमेन्टेसन एन्ड कन्ट्रोल सिस्टम्स ल्याब, स्विचगियर एन्ड प्रोटेक्सन ल्याब, पावर इलेक्ट्रोनिक्स ल्याब, इलेक्ट्रिक ड्राइभ्स ल्याब, र पावर प्लान्ट इक्विपमेन्ट ल्याब छन्।"
         },
         {
             "id": "eee_005",
             "question": "What elective subjects can Electrical Engineering students choose at KEC?",
-            "answer": "Electives include Electric Energy System Management, Rural Electrification, Neural Networks, Micro-Hydro Power, Advanced Power System, Biomedical Instrumentation, Reliability Engineering, Applied Photovoltaic Engineering, and Wind Energy Conversion System."
+            "answer": "Electives include Electric Energy System Management, Rural Electrification, Neural Networks, Micro-Hydro Power, Advanced Power System, Biomedical Instrumentation, Reliability Engineering, Applied Photovoltaic Engineering, and Wind Energy Conversion System.",
+            "answer_ne": "इलेक्टिभ सब्जेक्टमा इलेक्ट्रिक एनर्जी सिस्टम म्यानेजमेन्ट, रुरल इलेक्ट्रिफिकेसन, न्युरल नेटवर्क, माइक्रो-हाइड्रो पावर, एडभान्स्ड पावर सिस्टम, बायोमेडिकल इन्स्ट्रुमेन्टेसन, रिलायबिलिटी इन्जिनियरिङ, एप्लाइड फोटोभोल्टाइक इन्जिनियरिङ, र विन्ड एनर्जी कन्भर्सन सिस्टम पर्छन्।"
         },
         {
             "id": "eee_006",
             "question": "Does the Electrical Engineering department publish anything?",
-            "answer": "Yes, the department publishes an annual magazine called 'Synergy', which includes articles and synopses of projects done by fourth-year students, encouraging participation in literature review and research."
+            "answer": "Yes, the department publishes an annual magazine called 'Synergy', which includes articles and synopses of projects done by fourth-year students, encouraging participation in literature review and research.",
+            "answer_ne": "हो, डिपार्टमेन्टले 'सिनर्जी' भन्ने वार्षिक म्यागजिन पब्लिस गर्छ, जसमा चौथो वर्षका स्टुडेन्टका प्रोजेक्टका आर्टिकल र सिनोप्सिस हुन्छन्, जसले लिटरेचर रिभ्यू र रिसर्चमा भाग लिन प्रोत्साहन दिन्छ।"
         },
         {
             "id": "eee_007",
             "question": "Is there a student club for Electrical Engineering at KEC?",
-            "answer": "Yes, the KEC Electrical Club (founded February 2016) organizes workshops, software simulation trainings, talk programs, and publishes the annual magazine Synergy. Past events include talk shows on hydropower development in Nepal and Proteus simulation training."
+            "answer": "Yes, the KEC Electrical Club (founded February 2016) organizes workshops, software simulation trainings, talk programs, and publishes the annual magazine Synergy. Past events include talk shows on hydropower development in Nepal and Proteus simulation training.",
+            "answer_ne": "हो, केईसी इलेक्ट्रिकल क्लब (फेब्रुअरी २०१६ मा खोलिएको) ले वर्कशप, सफ्टवेयर सिमुलेसन ट्रेनिङ, र टक प्रोग्राम आयोजना गर्छ, अनि वार्षिक म्यागजिन सिनर्जी पब्लिस गर्छ। पहिलेका इभेन्टमा नेपालमा हाइड्रोपावर डेभलपमेन्टबारे टक शो र प्रोटियस सिमुलेसन ट्रेनिङ परेका छन्।"
         },
         {
             "id": "eee_008",
             "question": "Who is the HOD of the Electrical Engineering department at KEC?",
-            "answer": "Er. Binod Bhandari is the HOD (Associate Professor) of the Department of Electrical Engineering at KEC."
+            "answer": "Er. Binod Bhandari is the HOD (Associate Professor) of the Department of Electrical Engineering at KEC.",
+            "answer_ne": "ईर. बिनोद भण्डारी केईसीको इलेक्ट्रिकल इन्जिनियरिङ डिपार्टमेन्टका एचओडी (एसोसिएट प्रोफेसर) हुनुहुन्छ।"
         },
         {
             "id": "eee_009",
             "question": "How many years does the Bachelor of Electrical Engineering program take at KEC?",
-            "answer": "The Bachelor of Electrical Engineering (BEE) program at KEC is a 4-year program affiliated with Tribhuvan University."
+            "answer": "The Bachelor of Electrical Engineering (BEE) program at KEC is a 4-year program affiliated with Tribhuvan University.",
+            "answer_ne": "केईसीको ब्याचलर अफ इलेक्ट्रिकल इन्जिनियरिङ (बीईई) प्रोग्राम त्रिभुवन युनिभर्सिटीसँग एफिलिएटेड चार वर्षको प्रोग्राम हो।"
         },
         {
             "id": "eee_010",
             "question": "What kinds of jobs involve electrical engineering skills according to KEC's department description?",
-            "answer": "Roles suited to electrical engineering interest include working with power generation, transmission and distribution; working with machines and control systems; general electrical systems work; and working with alternative and renewable energy sources."
+            "answer": "Roles suited to electrical engineering interest include working with power generation, transmission and distribution; working with machines and control systems; general electrical systems work; and working with alternative and renewable energy sources.",
+            "answer_ne": "इलेक्ट्रिकल इन्जिनियरिङमा इन्ट्रेस्ट भएकाहरूका लागि पावर जेनेरेसन, ट्रान्समिसन र डिस्ट्रिब्युसनमा काम गर्ने, मेसिन र कन्ट्रोल सिस्टमसँग काम गर्ने, जनरल इलेक्ट्रिकल सिस्टम वर्क, र अल्टरनेटिभ तथा रिन्युएबल एनर्जी सोर्ससँग काम गर्ने जस्ता रोलहरू उपयुक्त हुन्छन्।"
         }
     ]
 }

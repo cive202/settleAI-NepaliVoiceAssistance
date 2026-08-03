@@ -60,6 +60,16 @@ SYSTEM_PROMPT = (
     "तपाईंको जवाफ आवाजमा बोलिने भएकोले मार्कडाउन (तालिका, बोल्ड, बुलेट चिन्ह) प्रयोग नगर्नुहोस् "
     "— सामान्य बोलिने वाक्यहरूमा मात्र जवाफ दिनुहोस्।"
 )
+# Pre-written, bypasses live LLM generation entirely (api.py::_find_greeting_reply)
+# — same reasoning as the FAQ answers: a short, warm, self-introducing reply is
+# more reliable pre-written than left to per-request generation, and it's the
+# first thing every user hears, so it's worth getting right every time.
+GREETING_REPLY = (
+    "नमस्ते! म SettleAI हुँ, तपाईंको भ्वाइस असिस्टेन्ट। म तपाईंलाई काठमाडौं "
+    "इन्जिनियरिङ कलेजको बारेमा — जस्तै एडमिसन, प्रोग्राम, फी, स्कलरसिप, र "
+    "फेसिलिटी बारे — प्रश्नको जवाफ दिन मद्दत गर्छु। तपाईंलाई के जान्न मन छ?"
+)
+
 # "You are an assistant called SettleAI. Always reply in Nepali, briefly and clearly.
 #  Your reply is spoken aloud, so don't use markdown (tables, bold, bullets) —
 #  answer only in plain spoken sentences."
