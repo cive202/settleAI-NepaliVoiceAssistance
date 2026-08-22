@@ -339,6 +339,19 @@ def _ndjson_line(obj: dict) -> bytes:
     return (json.dumps(obj, ensure_ascii=False) + "\n").encode("utf-8")
 
 
+# Sent on every streaming response. Deployed behind RunPod's HTTP proxy
+# (nginx + Cloudflare), a streamed NDJSON body arrived as HTTP 200 with the
+# right content-type and *zero bytes* — the proxy buffered the whole
+# response and dropped it, while plain JSON endpoints on the same pod were
+# fine. X-Accel-Buffering: no is the nginx-family opt-out; the Cache-Control
+# / Connection pair keeps intermediaries from buffering or coalescing too.
+_STREAM_HEADERS = {
+    "X-Accel-Buffering": "no",
+    "Cache-Control": "no-cache, no-transform",
+    "Connection": "keep-alive",
+}
+
+
 def _stream_cached_reply(user_text: str, cached: dict, transcript: str | None = None):
     """Sync generator: replays a cached answer's sentences/audio verbatim —
     no RAG retrieval, LLM generation, or TTS synthesis involved."""
@@ -505,12 +518,14 @@ async def process_audio(audio: UploadFile = File(...)):
         return StreamingResponse(
             _stream_cached_reply(text, cached, transcript=text),
             media_type="application/x-ndjson",
+            headers=_STREAM_HEADERS,
         )
 
     reply_kwargs = await asyncio.to_thread(_resolve_reply_kwargs, text)
     return StreamingResponse(
         _stream_reply(text, reply_kwargs, transcript=text),
         media_type="application/x-ndjson",
+        headers=_STREAM_HEADERS,
     )
 
 
@@ -522,12 +537,14 @@ async def process_text(body: TextBody):
         return StreamingResponse(
             _stream_cached_reply(body.text, cached),
             media_type="application/x-ndjson",
+            headers=_STREAM_HEADERS,
         )
 
     reply_kwargs = await asyncio.to_thread(_resolve_reply_kwargs, body.text)
     return StreamingResponse(
         _stream_reply(body.text, reply_kwargs),
         media_type="application/x-ndjson",
+        headers=_STREAM_HEADERS,
     )
 
 
