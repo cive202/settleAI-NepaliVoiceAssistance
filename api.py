@@ -141,9 +141,18 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="SettleAI Voice API", lifespan=lifespan)
 
+# Local dev origins are always allowed; deployed frontend origins come from
+# CORS_ORIGINS (comma-separated) so the image doesn't need rebuilding when
+# the frontend URL changes. Note allow_credentials=True means "*" is not a
+# usable wildcard here — browsers reject it — so the real origin must be
+# listed explicitly.
+_CORS_ORIGINS = ["http://localhost:3000", "http://localhost:3001"] + [
+    o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_origins=_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
