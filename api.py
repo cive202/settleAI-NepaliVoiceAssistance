@@ -40,6 +40,8 @@ import logging
 import os
 import re
 import time
+import queue
+import threading
 from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from logging.handlers import RotatingFileHandler
@@ -352,10 +354,28 @@ _STREAM_HEADERS = {
 }
 
 
+# Blank NDJSON lines, sent to keep the connection producing bytes while the
+# LLM/TTS work happens. Deployed behind RunPod's proxy, a streaming response
+# that sent headers and then went quiet for 10-30s had its connection killed
+# after ~2.5s with the body discarded (HTTP 200, zero bytes, curl exit 92) —
+# plain-JSON endpoints were unaffected because they send headers and body
+# together. NDJSON tolerates blank lines and the frontend parser already
+# skips them (`if (line)` after trim in lib/api.ts), so these are invisible
+# to clients and need no frontend change.
+_PRODUCER_DONE = object()  # sentinel: producer thread finished
+_KEEPALIVE = b"\n"
+# 1.0s, not 2.0s: the observed proxy cutoff was ~2.5s of silence, and a 2.0s
+# interval measured a 2.40s worst-case gap (the interval only bounds the TTS
+# wait — LLM generation before the first submit adds to it). 1.0s keeps the
+# worst case near ~1.4s, a real margin rather than a coin flip.
+_KEEPALIVE_INTERVAL_S = 1.0
+
+
 def _stream_cached_reply(user_text: str, cached: dict, transcript: str | None = None):
     """Sync generator: replays a cached answer's sentences/audio verbatim —
     no RAG retrieval, LLM generation, or TTS synthesis involved."""
     assert _llm
+    yield _KEEPALIVE  # prime the connection before any slow work
     if transcript is not None:
         yield _ndjson_line({"type": "transcript", "text": transcript})
     with timed("cache.hit"):
@@ -383,52 +403,75 @@ def _stream_reply(user_text: str, reply_kwargs: dict, transcript: str | None = N
     first.
     """
     assert _llm and _tts
-    if transcript is not None:
-        yield _ndjson_line({"type": "transcript", "text": transcript})
 
-    buffer = ""
-    assistant_parts: list[str] = []
-    sentences_for_cache: list[dict] = []
-    first_chunk_sent = False
-    pending: list[tuple[str, Future]] = []
+    def produce(out: queue.Queue) -> None:
+        """Run the whole LLM+TTS pipeline, pushing finished NDJSON lines onto
+        `out`. Runs in its own thread so the generator below can emit
+        keepalives on a fixed schedule no matter which stage is slow."""
+        buffer = ""
+        assistant_parts: list[str] = []
+        sentences_for_cache: list[dict] = []
+        first_chunk_sent = False
+        pending: list[tuple[str, Future]] = []
 
-    def submit(text: str, executor: ThreadPoolExecutor) -> None:
-        pending.append((text, executor.submit(_tts.synthesize, text)))
+        def drain_oldest() -> None:
+            text, fut = pending.pop(0)
+            with timed("tts.synthesize"):
+                audio = fut.result()
+            entry = {"text": text, "audio": base64.b64encode(audio).decode()}
+            sentences_for_cache.append(entry)
+            out.put(_ndjson_line({"type": "sentence", **entry}))
 
-    def drain_oldest() -> bytes:
-        text, fut = pending.pop(0)
-        with timed("tts.synthesize"):
-            audio = fut.result()
-        entry = {"text": text, "audio": base64.b64encode(audio).decode()}
-        sentences_for_cache.append(entry)
-        return _ndjson_line({"type": "sentence", **entry})
+        try:
+            if transcript is not None:
+                out.put(_ndjson_line({"type": "transcript", "text": transcript}))
 
-    with ThreadPoolExecutor(max_workers=TTS_MAX_CONCURRENT) as executor:
-        for delta in _llm.get_response_stream(user_text, **reply_kwargs):
-            buffer += delta
-            assistant_parts.append(delta)
-            while True:
-                pop = _pop_first_chunk if not first_chunk_sent else _pop_sentence
-                sentence, buffer = pop(buffer)
-                if sentence is None:
-                    break
-                first_chunk_sent = True
-                submit(sentence, executor)
-                if len(pending) >= TTS_MAX_CONCURRENT:
-                    yield drain_oldest()
+            with ThreadPoolExecutor(max_workers=TTS_MAX_CONCURRENT) as executor:
+                for delta in _llm.get_response_stream(user_text, **reply_kwargs):
+                    buffer += delta
+                    assistant_parts.append(delta)
+                    while True:
+                        pop = _pop_first_chunk if not first_chunk_sent else _pop_sentence
+                        sentence, buffer = pop(buffer)
+                        if sentence is None:
+                            break
+                        first_chunk_sent = True
+                        pending.append((sentence, executor.submit(_tts.synthesize, sentence)))
+                        if len(pending) >= TTS_MAX_CONCURRENT:
+                            drain_oldest()
 
-        tail = buffer.strip()
-        if tail:
-            submit(tail, executor)
+                tail = buffer.strip()
+                if tail:
+                    pending.append((tail, executor.submit(_tts.synthesize, tail)))
 
-        while pending:
-            yield drain_oldest()
+                while pending:
+                    drain_oldest()
 
-    assistant_text = "".join(assistant_parts).strip()
-    yield _ndjson_line({"type": "done", "assistant_text": assistant_text})
+            assistant_text = "".join(assistant_parts).strip()
+            out.put(_ndjson_line({"type": "done", "assistant_text": assistant_text}))
 
-    if "context" in reply_kwargs and assistant_text:
-        _cache_answer(user_text, assistant_text, sentences_for_cache)
+            if "context" in reply_kwargs and assistant_text:
+                _cache_answer(user_text, assistant_text, sentences_for_cache)
+        except BaseException as exc:  # surfaced to the consumer below
+            out.put(exc)
+        finally:
+            out.put(_PRODUCER_DONE)
+
+    out: queue.Queue = queue.Queue()
+    threading.Thread(target=produce, args=(out,), daemon=True).start()
+
+    yield _KEEPALIVE  # prime the connection before any slow work
+    while True:
+        try:
+            item = out.get(timeout=_KEEPALIVE_INTERVAL_S)
+        except queue.Empty:
+            yield _KEEPALIVE  # bounded silence regardless of which stage is slow
+            continue
+        if item is _PRODUCER_DONE:
+            return
+        if isinstance(item, BaseException):
+            raise item
+        yield item
 
 
 def _load_audio(raw: bytes) -> np.ndarray:
