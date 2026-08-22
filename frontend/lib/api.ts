@@ -35,19 +35,14 @@ async function* readNdjson(res: Response): AsyncGenerator<StreamEvent> {
     while ((newlineIdx = buffer.indexOf("\n")) >= 0) {
       const line = buffer.slice(0, newlineIdx).trim();
       buffer = buffer.slice(newlineIdx + 1);
-      if (line) {
-        try {
-          yield JSON.parse(line) as StreamEvent;
-        } catch (e) {
-          console.error("Bad NDJSON line:", line);
-          throw e;
-        }
-      }
+      if (line) yield JSON.parse(line) as StreamEvent;
     }
   }
-  const tail = buffer.trim();
-  if (tail) yield JSON.parse(tail) as StreamEvent;
+   const tail = buffer.trim();
+   if (tail) {
+     for (const evt of parseConcatenatedJson(tail)) yield evt;
 }
+
 export async function* streamProcessAudio(
   blob: Blob,
   signal?: AbortSignal
