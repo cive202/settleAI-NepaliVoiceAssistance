@@ -42,7 +42,7 @@ async function* readNdjson(res: Response): AsyncGenerator<StreamEvent> {
    if (tail) {
      for (const evt of parseConcatenatedJson(tail)) yield evt;
 }
-
+}
 export async function* streamProcessAudio(
   blob: Blob,
   signal?: AbortSignal
