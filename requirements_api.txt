@@ -1,12 +1,30 @@
 fastapi>=0.115
 uvicorn[standard]>=0.30
 python-multipart>=0.0.9
+pydantic>=2.0
 soundfile>=0.12
 librosa>=0.10
+requests>=2.32
+numpy>=1.26
+python-dotenv>=1.0
+openai>=1.50
+
+# ASR — NVIDIA-hosted whisper-large-v3 (asr/whisper_nvidia.py), used by api.py
+nvidia-riva-client>=2.26.0
+
+# TTS (tts.py)
+gTTS>=2.5
+pygame>=2.6
+
+# VAD (vad.py) — Silero VAD via torch.hub, used unconditionally by api.py's
+# lifespan for /ws/barge-in. CPU-only build is plenty for this tiny model —
+# see Dockerfile for the CPU wheel index.
+torch>=2.5
+torchaudio>=2.5
 
 langchain>=1.3,<2.0
 langchain-classic>=1.0.8,<2.0
-langchain-ollama>=1.1.0,<2.0
+langchain-openai>=1.0.0,<2.0
 langchain-chroma>=1.1.0,<2.0
 langchain-text-splitters>=1.1.2,<2.0
 chromadb>=1.3.5,<2.0

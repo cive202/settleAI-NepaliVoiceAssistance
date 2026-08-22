@@ -1,26 +1,26 @@
 """
-rag/service.py — Ties scraping, the Chroma store, and the Ollama LLM
-together into a single RAG ingest/query interface.
+rag/service.py — Ties scraping, the Chroma store, and the Groq-hosted RAG
+chat model together into a single RAG ingest/query interface.
 """
 
-import re
 import uuid
 
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
 from langchain_classic.chains.retrieval import create_retrieval_chain
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 
 from config import (
+    GROQ_API_KEY,
+    LLM_BASE_URL,
     RAG_CHAT_MODEL,
     RAG_CONFIDENT,
     RAG_CONTEXT_TOKEN_BUDGET,
     RAG_LLM_TEMPERATURE,
+    RAG_LLM_TIMEOUT_S,
     RAG_LOW_CONFIDENCE,
     RAG_MAX_CONTEXT_PAGES,
-    RAG_OLLAMA_BASE_URL,
-    RAG_OLLAMA_TIMEOUT_S,
     RAG_RETRIEVER_K,
 )
 from perf import timed
@@ -48,11 +48,12 @@ class RAGService:
     def __init__(self):
         self._embeddings = get_embeddings()
         self._store = get_vectorstore(self._embeddings)
-        self._llm = ChatOllama(
+        self._llm = ChatOpenAI(
             model=RAG_CHAT_MODEL,
-            base_url=RAG_OLLAMA_BASE_URL,
+            base_url=LLM_BASE_URL,
+            api_key=GROQ_API_KEY,
             temperature=RAG_LLM_TEMPERATURE,
-            client_kwargs={"timeout": RAG_OLLAMA_TIMEOUT_S},
+            timeout=RAG_LLM_TIMEOUT_S,
         )
         self._retriever = self._store.as_retriever(search_kwargs={"k": RAG_RETRIEVER_K})
         combine_docs_chain = create_stuff_documents_chain(self._llm, _RAG_PROMPT)
@@ -152,9 +153,13 @@ class RAGService:
         context, which means "understood, but genuinely not in the knowledge base".
 
         The ingested content is in English, while voice questions are often Nepali
-        (and may be garbled, since they typically come through ASR). Embedding the
-        raw Nepali query directly against English documents retrieves poorly, so the
-        query is translated to English first, purely for retrieval purposes.
+        (and may be garbled, since they typically come through ASR). Retrieval used
+        to translate the query to English first — that was needed for the old
+        Ollama nomic-embed-text embeddings (English-only), but bge-m3 is
+        multilingual and embeds the raw Nepali query directly at comparable or
+        better relevance scores (verified against RAG_LOW_CONFIDENCE/RAG_CONFIDENT
+        across clear/garbled/off-topic test queries — same threshold band either
+        way), for one less Groq round trip per turn.
 
         Top-k similarity search picks individual chunks, but a chunk boundary can
         split apart something like a full staff list. So top-k is used only to
@@ -163,11 +168,9 @@ class RAGService:
         order) — the LLM sees whole pages instead of a partial slice of one, while
         the page cap keeps the prompt from ballooning when many pages match.
         """
-        with timed("rag.translate"):
-            search_query = self._translate_to_english(question)
         with timed("rag.similarity_search"):
             scored = self._store.similarity_search_with_relevance_scores(
-                search_query, k=RAG_RETRIEVER_K
+                question, k=RAG_RETRIEVER_K
             )
         if not scored:
             return "", []
@@ -213,28 +216,3 @@ class RAGService:
                 budget -= page_tokens
 
         return "\n\n".join(page_texts), used_sources
-
-    def _translate_to_english(self, text: str) -> str:
-        # Asking the local model to "translate" already-English text into English
-        # is a no-op it should perform but sometimes doesn't (observed: it instead
-        # translates clean English INTO Nepali, presumably misreading "may be
-        # Nepali" in the instructions as "should be Nepali"). Skipping the call
-        # entirely for non-Devanagari input sidesteps that, and is faster too.
-        if not re.search(r"[ऀ-ॿ]", text):
-            return text
-
-        # A simple, blunt "you are a translation engine" framing held up far
-        # better in testing than an XML-delimited instruction — the local model
-        # would sometimes "clean up" garbled Nepali instead of translating it,
-        # or transliterate instead of translating, especially with the more
-        # hedged delimiter-based prompt. Still strip stray Devanagari as a
-        # defensive fallback in case it slips through anyway.
-        prompt = (
-            "You are a translation engine. Your ONLY job is to output the ENGLISH "
-            "translation of the Nepali text below. Never output Devanagari script "
-            "in your answer. If a word is garbled, guess the closest English word. "
-            "Output format: just the English sentence, nothing else, no Devanagari "
-            f"characters at all.\n\nNepali text: {text}\n\nEnglish translation:"
-        )
-        raw = self._llm.invoke(prompt).content.strip()
-        return re.sub(r"[ऀ-ॿ]", "", raw).strip()

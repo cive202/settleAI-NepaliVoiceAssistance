@@ -40,6 +40,7 @@ import logging
 import os
 import re
 import time
+from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from logging.handlers import RotatingFileHandler
 
@@ -70,33 +71,56 @@ from config import (
     SAMPLE_RATE,
     SLACK_ENABLED,
     SYSTEM_PROMPT,
+    TTS_MAX_CONCURRENT,
     VAD_THRESHOLD,
 )
 from llm import LLM
 from perf import timed
 from rag import RAGService
-from tts import GTTSEngine
+from tts import TTS
 from vad import VAD
 
 _asr: ASRBackend | None = None
 _llm: LLM | None = None
-_tts: GTTSEngine | None = None
+_tts: TTS | None = None
 _rag: RAGService | None = None
 _vad: VAD | None = None
 _slack_listener = None
 _slack_task: asyncio.Task | None = None
 
 
+async def _warm_up_runpod_endpoints() -> None:
+    """Send one throwaway request to each RunPod endpoint so their workers
+    are already booted by the time a real user shows up. Failures here are
+    logged, not raised — a slow first real request is a fine fallback."""
+    assert _rag and _tts
+    try:
+        await asyncio.gather(
+            asyncio.to_thread(_rag.embed_query, "warm up"),
+            asyncio.to_thread(_tts.synthesize, "नमस्ते"),
+        )
+        print("RunPod endpoints warmed up.")
+    except Exception as e:
+        print(f"RunPod warm-up failed (non-fatal, first real request will be slower): {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _asr, _llm, _tts, _rag, _vad, _slack_listener, _slack_task
     print("Loading models…")
-    _asr = get_asr(type="local")
+    _asr = get_asr(type="nvidia")
     _llm = LLM(api_key=GROQ_API_KEY or "", model=LLM_MODEL, system_prompt=SYSTEM_PROMPT)
-    _tts = GTTSEngine(lang="ne")
+    _tts = TTS()
     _rag = RAGService()
     _vad = VAD(threshold=VAD_THRESHOLD)
     print("All models ready.")
+
+    # Fire warm-up calls at the RunPod embedding/TTS endpoints in the
+    # background — even with FlashBoot, a worker that has never run yet
+    # still pays a real cold boot the first time. Doing that here means the
+    # first real user request doesn't. Fired as a background task (not
+    # awaited) so server startup/readiness isn't delayed waiting for it.
+    asyncio.create_task(_warm_up_runpod_endpoints())
 
     if SLACK_ENABLED:
         from slack_bot import SlackListener
@@ -180,10 +204,9 @@ def _find_cached_answer(user_text: str) -> dict | None:
     """Return the cached entry for the closest previously-cached question, if
     close enough by embedding cosine similarity, else None.
 
-    Embeds `user_text` as-is (no translation) — cheap enough to run on every
-    turn, and comparing Nepali-to-Nepali sidesteps the translation-quality
-    issues that make raw-embedding matches unreliable against the English doc
-    store (see RAGService._translate_to_english).
+    Embeds `user_text` as-is (bge-m3 is multilingual, so no translation step
+    is needed for either this or document retrieval — see
+    RAGService.retrieve_context) — cheap enough to run on every turn.
     """
     if not _ANSWER_CACHE or _is_greeting(user_text):
         return None
@@ -240,17 +263,67 @@ def _resolve_reply_kwargs(user_text: str) -> dict:
 
 
 _SENTENCE_BOUNDARY = re.compile(r"[।॥.!?]")
+# Clause-level (adds comma/semicolon/colon) — used only for the very first
+# chunk of a reply, so TTS can start on less text instead of waiting for a
+# full sentence. Later chunks use _SENTENCE_BOUNDARY for better prosody.
+_CLAUSE_BOUNDARY = re.compile(r"[।॥.!?,;:]")
+
+# A "." after any of these isn't a sentence end. Answers here are dense with
+# titles ("Er. Binod Bhandari", "Dr. Lila Raj Koirala") — treating those
+# periods as boundaries split names across two TTS calls, which both doubled
+# synthesis cost and broke pronunciation. A faculty-list answer fragmented
+# into 13 chunks instead of ~2 this way.
+_ABBREVIATIONS = (
+    "er dr mr mrs ms prof asst assoc sn st jr sr no vs etc bsc msc phd "
+    "एर डा डा० श्री प्रा"
+).split()
+_ABBREV_RE = re.compile(
+    r"(?:^|[\s(\[])(?:" + "|".join(re.escape(a) for a in _ABBREVIATIONS) + r")$",
+    re.IGNORECASE,
+)
+# "45.5" / "१२.५" — a digit on both sides of the period is a decimal, not a stop.
+_DECIMAL_RE = re.compile(r"[\d०-९]$")
+
+
+def _is_real_boundary(buffer: str, match: re.Match[str]) -> bool:
+    """False for periods that only look like sentence ends: abbreviations
+    ("Er."), single-letter initials ("B."), and decimal points ("45.5")."""
+    if match.group() != ".":
+        return True  # ।, ॥, !, ? are unambiguous
+    before = buffer[: match.start()]
+    if _ABBREV_RE.search(before):
+        return False
+    if re.search(r"(?:^|[\s(\[])[A-Za-z]$", before):
+        return False  # initial, e.g. the "B." in "Binod B. Bhandari"
+    after = buffer[match.end() : match.end() + 1]
+    return not (_DECIMAL_RE.search(before) and after.isdigit())
+
+
+def _pop_chunk(buffer: str, boundary: re.Pattern[str]) -> tuple[str | None, str]:
+    """Split the first complete chunk off `buffer` at `boundary`, or (None, buffer) if none yet."""
+    pos = 0
+    while True:
+        match = boundary.search(buffer, pos)
+        if not match:
+            return None, buffer
+        if _is_real_boundary(buffer, match):
+            break
+        pos = match.end()
+    chunk, rest = buffer[: match.end()].strip(), buffer[match.end() :]
+    if not chunk:
+        return _pop_chunk(rest, boundary)  # stray boundary char with nothing before it
+    return chunk, rest
 
 
 def _pop_sentence(buffer: str) -> tuple[str | None, str]:
     """Split the first complete sentence off `buffer`, or (None, buffer) if none yet."""
-    match = _SENTENCE_BOUNDARY.search(buffer)
-    if not match:
-        return None, buffer
-    sentence, rest = buffer[: match.end()].strip(), buffer[match.end() :]
-    if not sentence:
-        return _pop_sentence(rest)  # stray boundary char with nothing before it
-    return sentence, rest
+    return _pop_chunk(buffer, _SENTENCE_BOUNDARY)
+
+
+def _pop_first_chunk(buffer: str) -> tuple[str | None, str]:
+    """Split the first complete *clause* off `buffer` — a shorter unit than a
+    full sentence, so the first TTS call has less text to synthesize."""
+    return _pop_chunk(buffer, _CLAUSE_BOUNDARY)
 
 
 def _ndjson_line(obj: dict) -> bytes:
@@ -275,6 +348,17 @@ def _stream_reply(user_text: str, reply_kwargs: dict, transcript: str | None = N
 
     Runs in a worker thread (via StreamingResponse's iterate_in_threadpool),
     so the blocking LLM/TTS calls inside don't block the event loop.
+
+    TTS calls for up to TTS_MAX_CONCURRENT sentences run concurrently via a
+    thread pool, overlapping with LLM token generation for later sentences —
+    RunPod's own logs showed a single TTS call regularly taking 4-17s (mostly
+    queue-dispatch wait, not GPU time), so synthesizing strictly one sentence
+    at a time left most of that time idle instead of overlapped. Concurrency
+    is capped to match the TTS endpoint's max worker count — submitting more
+    in-flight jobs than there are workers to run them just makes them queue
+    instead of actually running in parallel. Sentence order is still
+    preserved: results are drained oldest-first regardless of which finishes
+    first.
     """
     assert _llm and _tts
     if transcript is not None:
@@ -283,26 +367,40 @@ def _stream_reply(user_text: str, reply_kwargs: dict, transcript: str | None = N
     buffer = ""
     assistant_parts: list[str] = []
     sentences_for_cache: list[dict] = []
-    for delta in _llm.get_response_stream(user_text, **reply_kwargs):
-        buffer += delta
-        assistant_parts.append(delta)
-        while True:
-            sentence, buffer = _pop_sentence(buffer)
-            if sentence is None:
-                break
-            with timed("tts.synthesize"):
-                audio = _tts.synthesize(sentence)
-            entry = {"text": sentence, "audio": base64.b64encode(audio).decode()}
-            sentences_for_cache.append(entry)
-            yield _ndjson_line({"type": "sentence", **entry})
+    first_chunk_sent = False
+    pending: list[tuple[str, Future]] = []
 
-    tail = buffer.strip()
-    if tail:
+    def submit(text: str, executor: ThreadPoolExecutor) -> None:
+        pending.append((text, executor.submit(_tts.synthesize, text)))
+
+    def drain_oldest() -> bytes:
+        text, fut = pending.pop(0)
         with timed("tts.synthesize"):
-            audio = _tts.synthesize(tail)
-        entry = {"text": tail, "audio": base64.b64encode(audio).decode()}
+            audio = fut.result()
+        entry = {"text": text, "audio": base64.b64encode(audio).decode()}
         sentences_for_cache.append(entry)
-        yield _ndjson_line({"type": "sentence", **entry})
+        return _ndjson_line({"type": "sentence", **entry})
+
+    with ThreadPoolExecutor(max_workers=TTS_MAX_CONCURRENT) as executor:
+        for delta in _llm.get_response_stream(user_text, **reply_kwargs):
+            buffer += delta
+            assistant_parts.append(delta)
+            while True:
+                pop = _pop_first_chunk if not first_chunk_sent else _pop_sentence
+                sentence, buffer = pop(buffer)
+                if sentence is None:
+                    break
+                first_chunk_sent = True
+                submit(sentence, executor)
+                if len(pending) >= TTS_MAX_CONCURRENT:
+                    yield drain_oldest()
+
+        tail = buffer.strip()
+        if tail:
+            submit(tail, executor)
+
+        while pending:
+            yield drain_oldest()
 
     assistant_text = "".join(assistant_parts).strip()
     yield _ndjson_line({"type": "done", "assistant_text": assistant_text})

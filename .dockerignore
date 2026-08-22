@@ -1,0 +1,21 @@
+# Secrets — never bake these into an image that gets pushed anywhere.
+.env_local
+
+# Not needed in the backend image.
+frontend/
+.venv/
+.venv-py314-backup/
+python-clients/
+.git/
+.claude/
+app/
+logs/
+chroma_db_backup.json
+
+__pycache__/
+*.pyc
+*.pyo
+
+Dockerfile
+.dockerignore
+README.md

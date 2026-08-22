@@ -4,4 +4,12 @@ __pycache__/
 *.pyo
 python-clients/
 chroma_db/
+chroma_db_backup.json
 logs/
+
+# Virtualenvs — never commit these.
+.venv/
+.venv-py314-backup/
+
+# Ad-hoc RunPod/console log dumps pulled in while debugging.
+logs*.txt
