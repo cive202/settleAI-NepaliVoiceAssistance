@@ -16,32 +16,15 @@ export type StreamEvent = TranscriptEvent | SentenceEvent | DoneEvent;
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 export const WS_API = API.replace(/^http/, "ws");
 
-/**
- * Parses a string that may contain multiple back-to-back JSON objects with
- * no separator between them (e.g. "{...}{...}{...}") by tracking brace
- * depth rather than assuming a single JSON value. Used as a fallback for
- * the trailing buffer content in readNdjson, where the RunPod proxy has
- * been observed to occasionally deliver multiple NDJSON lines glued
- * together without the newline separator that normally splits them.
- */
-function parseConcatenatedJson(text: string): StreamEvent[] {
-  const events: StreamEvent[] = [];
-  let depth = 0;
-  let start = -1;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (c === "{") {
-      if (depth === 0) start = i;
-      depth++;
-    } else if (c === "}") {
-      depth--;
-      if (depth === 0 && start >= 0) {
-        events.push(JSON.parse(text.slice(start, i + 1)) as StreamEvent);
-        start = -1;
-      }
-    }
+/** Parses one NDJSON record, logging the offending text before rethrowing so
+ * a malformed line is identifiable from the browser console. */
+function parseEvent(line: string): StreamEvent {
+  try {
+    return JSON.parse(line) as StreamEvent;
+  } catch (e) {
+    console.error("Bad NDJSON line:", line);
+    throw e;
   }
-  return events;
 }
 
 async function* readNdjson(res: Response): AsyncGenerator<StreamEvent> {
@@ -60,25 +43,15 @@ async function* readNdjson(res: Response): AsyncGenerator<StreamEvent> {
     while ((newlineIdx = buffer.indexOf("\n")) >= 0) {
       const line = buffer.slice(0, newlineIdx).trim();
       buffer = buffer.slice(newlineIdx + 1);
-      if (line) {
-        try {
-          yield JSON.parse(line) as StreamEvent;
-        } catch (e) {
-          console.error("Bad NDJSON line:", line);
-          throw e;
-        }
-      }
+      // Blank lines are the server's keepalives (_KEEPALIVE in api.py), sent
+      // to stop RunPod's proxy killing a connection that goes quiet while the
+      // LLM/TTS work runs. They carry no payload, so skip them.
+      if (line) yield parseEvent(line);
     }
   }
+  buffer += decoder.decode(); // flush any trailing multi-byte character
   const tail = buffer.trim();
-  if (tail) {
-    try {
-      for (const evt of parseConcatenatedJson(tail)) yield evt;
-    } catch (e) {
-      console.error("Bad NDJSON tail:", tail);
-      throw e;
-    }
-  }
+  if (tail) yield parseEvent(tail);
 }
 
 export async function* streamProcessAudio(
