@@ -66,6 +66,7 @@ from pydantic import BaseModel
 from asr import get_asr
 from asr.base import ASRBackend
 from config import (
+    ASR_BACKEND,
     BARGE_IN_CONSECUTIVE_FRAMES,
     GROQ_API_KEY,
     LLM_MODEL,
@@ -96,11 +97,19 @@ async def _warm_up_runpod_endpoints() -> None:
     are already booted by the time a real user shows up. Failures here are
     logged, not raised — a slow first real request is a fine fallback."""
     assert _rag and _tts
+    jobs = [
+        asyncio.to_thread(_rag.embed_query, "warm up"),
+        asyncio.to_thread(_tts.synthesize, "नमस्ते"),
+    ]
+    # Only the self-hosted ASR endpoint scales to zero and so needs waking;
+    # NVIDIA's NVCF endpoint is always-on, and the local backend is in-process.
+    if ASR_BACKEND == "runpod":
+        assert _asr
+        # 0.5s of silence: enough to dispatch a worker and load the model,
+        # while no_speech_threshold makes the transcript come back empty.
+        jobs.append(asyncio.to_thread(_asr.transcribe, np.zeros(SAMPLE_RATE // 2, dtype=np.float32)))
     try:
-        await asyncio.gather(
-            asyncio.to_thread(_rag.embed_query, "warm up"),
-            asyncio.to_thread(_tts.synthesize, "नमस्ते"),
-        )
+        await asyncio.gather(*jobs)
         print("RunPod endpoints warmed up.")
     except Exception as e:
         print(f"RunPod warm-up failed (non-fatal, first real request will be slower): {e}")
@@ -110,7 +119,7 @@ async def _warm_up_runpod_endpoints() -> None:
 async def lifespan(app: FastAPI):
     global _asr, _llm, _tts, _rag, _vad, _slack_listener, _slack_task
     print("Loading models…")
-    _asr = get_asr(type="nvidia")
+    _asr = get_asr(type=ASR_BACKEND)
     _llm = LLM(api_key=GROQ_API_KEY or "", model=LLM_MODEL, system_prompt=SYSTEM_PROMPT)
     _tts = TTS()
     _rag = RAGService()

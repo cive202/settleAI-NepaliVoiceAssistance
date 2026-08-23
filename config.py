@@ -25,6 +25,22 @@ ASR_NVCF_URI = "grpc.nvcf.nvidia.com:443"
 ASR_FUNCTION_ID = "b702f636-f60c-4a3d-a6f4-f3568c13bd7d"
 ASR_TIMEOUT_S = 15  # bound worst-case latency if the gRPC endpoint stalls
 
+# Which backend api.py builds at startup: "nvidia" (hosted whisper-large-v3
+# above), "runpod" (self-hosted Whisper in asr_worker/), or "local"
+# (transformers in-process — needs GPU torch + transformers, which the API
+# image deliberately does not ship, so it's for dev machines only).
+#
+# "nvidia" stays the default so an unconfigured deploy keeps working, but its
+# Nepali output degenerates into repetition loops and Riva's RecognitionConfig
+# exposes no decoding knobs to fix that — hence asr_worker/. Set
+# ASR_BACKEND=runpod once that endpoint is up.
+ASR_BACKEND = os.getenv("ASR_BACKEND", "nvidia")
+# https://api.runpod.ai/v2/<endpoint-id>  (no trailing /run)
+ASR_RUNPOD_BASE_URL = os.getenv("ASR_BASE_URL")
+# Distinct from ASR_KEY above, which is the NVIDIA NVCF bearer token.
+ASR_RUNPOD_KEY = os.getenv("ASR_RUNPOD_KEY") or os.getenv("RUNPOD_API_KEY")
+ASR_POLL_TIMEOUT_S = 120  # queue dispatch + GPU time, same headroom as TTS
+
 # ── VAD ──────────────────────────────────────
 CHUNK_MS = 32  # ms per VAD chunk (must be 32ms for 16kHz Silero)
 CHUNK_SAMPLES = int(SAMPLE_RATE * CHUNK_MS / 1000)  # 512
