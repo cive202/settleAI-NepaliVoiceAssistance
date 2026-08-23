@@ -35,6 +35,9 @@ c.decoder_layers = 4 if 'large-v3-turbo' in '${ASR_MODEL_ID}'.lower() else c.dec
 AutoModelForSpeechSeq2Seq.from_pretrained('${ASR_MODEL_ID}', config=c); \
 AutoProcessor.from_pretrained('${ASR_PROCESSOR_ID}')"
 
-COPY handler.py .
+# Built with the repo root as context (RunPod's GitHub builder always uses
+# the repo root, not the Dockerfile's own directory — see git history for
+# the build failure this caused), so this path is relative to root.
+COPY asr_worker/handler.py .
 
 CMD ["python", "-u", "handler.py"]
