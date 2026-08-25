@@ -57,8 +57,8 @@ flowchart LR
     end
 
     subgraph RP["RunPod Serverless · GPU"]
-        ASR["Whisper ASR"]
-        TTS["indic-parler-tts"]
+        ASR["Whisper-ASR-(replacement-progressing)"]
+        TTS["fine-tuned-tts"]
         EMB["bge-m3 embeddings"]
     end
 
