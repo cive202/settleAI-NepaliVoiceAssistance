@@ -5,7 +5,9 @@ import { Mic, MicOff, Send, Volume2, X, Loader2, Sparkles } from "lucide-react";
 import { FormattedText } from "./FormattedText";
 import { AudioRecorder } from "@/lib/audio";
 import { AudioQueue } from "@/lib/audioQueue";
-import { streamProcessAudio, streamText, type StreamEvent } from "@/lib/api";
+import { checkHealth, streamProcessAudio, streamText, type StreamEvent } from "@/lib/api";
+import { DEMO_AUDIO_SRC, DEMO_TEXT_NE } from "@/lib/demo";
+import { Spotlight, rectOf, unionRect, type Rect } from "./Spotlight";
 
 type Status = "idle" | "recording" | "processing" | "speaking" | "error";
 
@@ -14,6 +16,7 @@ interface Turn {
   question: string;
   answer: string;
   audioChunks: string[]; // base64 mp3, one per sentence
+  isDemo?: boolean; // true if this turn was answered by the offline demo clip, not a live stream
 }
 
 const STATUS_LABEL: Record<Status, string> = {
@@ -35,24 +38,58 @@ export function AskWidget() {
   const [inputText, setInputText] = useState("");
   const [turns, setTurns] = useState<Turn[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // null while the health probe is in flight. The widget can be embedded on a
+  // page (like /kec-demo) whose backend is asleep, same as /chat.
+  const [demoMode, setDemoMode] = useState<boolean | null>(null);
 
   const recorderRef = useRef(new AudioRecorder());
   const audioQueueRef = useRef(new AudioQueue());
   const scrollRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const micRef = useRef<HTMLButtonElement>(null);
+
+  // Two-step onboarding: 0 = point at the trigger, 1 = point at the mic once the
+  // panel is open, null = finished/skipped. First-time visitors otherwise have no
+  // idea this navbar button is the demo.
+  const [tourStep, setTourStep] = useState<0 | 1 | null>(0);
+  const [hole, setHole] = useState<Rect | null>(null);
+  const [target, setTarget] = useState<Rect | null>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [turns, status]);
 
+  useEffect(() => {
+    let cancelled = false;
+    checkHealth().then((ok) => {
+      if (!cancelled) setDemoMode(!ok);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const closePanel = useCallback(() => {
+    setOpen(false);
+    setTourStep((step) => (step === 1 ? null : step));
+  }, []);
+
+  const toggleOpen = useCallback(() => {
+    const next = !open;
+    setOpen(next);
+    if (next && tourStep === 0) setTourStep(1);
+    else if (!next && tourStep === 1) setTourStep(null);
+  }, [open, tourStep]);
+
   // Close on outside click / Escape.
   useEffect(() => {
     if (!open) return;
     const onPointer = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) setOpen(false);
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) closePanel();
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") closePanel();
     };
     document.addEventListener("mousedown", onPointer);
     document.addEventListener("keydown", onKey);
@@ -60,7 +97,33 @@ export function AskWidget() {
       document.removeEventListener("mousedown", onPointer);
       document.removeEventListener("keydown", onKey);
     };
-  }, [open]);
+  }, [open, closePanel]);
+
+  // Rects are viewport-relative (getBoundingClientRect) to match Spotlight's
+  // position:fixed. Re-measured on a light interval as well as resize/scroll so
+  // the highlight follows the panel's open animation without extra plumbing.
+  useEffect(() => {
+    if (tourStep === null) return;
+    const measure = () => {
+      const trigger = rectOf(triggerRef.current);
+      if (tourStep === 0) {
+        setHole(trigger);
+        setTarget(trigger);
+        return;
+      }
+      setHole(unionRect(trigger, rectOf(panelRef.current)));
+      setTarget(rectOf(micRef.current));
+    };
+    measure();
+    const id = window.setInterval(measure, 250);
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, true);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure, true);
+    };
+  }, [tourStep, open]);
 
   const playChunks = useCallback((chunks: string[]) => {
     const queue = audioQueueRef.current;
@@ -70,6 +133,26 @@ export function AskWidget() {
     queue.finish();
     setStatus("speaking");
   }, []);
+
+  const playDemoAudio = useCallback(() => {
+    const queue = audioQueueRef.current;
+    queue.stop();
+    queue.onDrained = () => setStatus("idle");
+    queue.pushSrc(DEMO_AUDIO_SRC);
+    queue.finish();
+    setStatus("speaking");
+  }, []);
+
+  /** Answers with the pre-rendered offline reply (lib/demo.ts) instead of a
+   * live stream — used when the backend is unreachable. */
+  const playDemoTurn = useCallback(
+    (question: string) => {
+      const id = `${Date.now()}`;
+      setTurns((prev) => [...prev, { id, question, answer: DEMO_TEXT_NE, audioChunks: [], isDemo: true }]);
+      playDemoAudio();
+    },
+    [playDemoAudio]
+  );
 
   /** Consumes a reply stream, creating/updating a Turn as sentences arrive
    * and queuing each sentence's audio for immediate playback. */
@@ -111,21 +194,48 @@ export function AskWidget() {
         }
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Request failed");
-      setStatus("error");
+      if (e instanceof TypeError) {
+        // fetch() rejects with TypeError only when the request never reached a
+        // server (DNS, refused, CORS preflight) — a real HTTP error surfaces as
+        // the Error readNdjson throws instead. This means the backend is gone.
+        setDemoMode(true);
+        if (turnCreated) {
+          setTurns((prev) => prev.map((t) => (t.id === id ? { ...t, answer: DEMO_TEXT_NE, isDemo: true } : t)));
+        } else {
+          setTurns((prev) => [
+            ...prev,
+            { id, question: question || "🎤 …", answer: DEMO_TEXT_NE, audioChunks: [], isDemo: true },
+          ]);
+        }
+        playDemoAudio();
+      } else {
+        setError(e instanceof Error ? e.message : "Request failed");
+        setStatus("error");
+      }
     }
-  }, []);
+  }, [playDemoAudio]);
 
   const submitText = useCallback(async () => {
     const text = inputText.trim();
     if (!text) return;
+    setTourStep(null);
     setInputText("");
     setError(null);
+    if (demoMode) {
+      playDemoTurn(text);
+      return;
+    }
     setStatus("processing");
     await runQuery(text, streamText(text));
-  }, [inputText, runQuery]);
+  }, [inputText, runQuery, demoMode, playDemoTurn]);
 
   const toggleMic = useCallback(async () => {
+    setTourStep(null);
+    if (demoMode && status === "idle") {
+      setError(null);
+      playDemoTurn("🎤 …");
+      return;
+    }
     if (status === "recording") {
       setStatus("processing");
       try {
@@ -145,14 +255,24 @@ export function AskWidget() {
       setError("Microphone access denied");
       setStatus("error");
     }
-  }, [status, runQuery]);
+  }, [status, runQuery, demoMode, playDemoTurn]);
 
   const busy = status === "processing" || status === "recording";
 
   return (
     <div className="relative text-white">
+      {tourStep !== null && (
+        <Spotlight
+          hole={hole}
+          target={target}
+          label={tourStep === 0 ? "Click here" : "Now click the mic"}
+          onSkip={() => setTourStep(null)}
+        />
+      )}
+
       <button
-        onClick={() => setOpen((v) => !v)}
+        ref={triggerRef}
+        onClick={toggleOpen}
         aria-label="Ask KEC Sahayak"
         className={[
           "flex items-center gap-2 px-3.5 py-2 rounded-full text-sm font-medium transition-all",
@@ -183,13 +303,19 @@ export function AskWidget() {
               </div>
             </div>
             <button
-              onClick={() => setOpen(false)}
+              onClick={closePanel}
               aria-label="Close"
               className="text-white/40 hover:text-white transition-colors p-1"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
+
+          {demoMode && (
+            <p className="px-4 py-1.5 text-[10px] text-amber-400/80 bg-amber-400/5 border-b border-white/5">
+              Demo mode — backend offline, playing a sample reply.
+            </p>
+          )}
 
           {/* Body */}
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-4 min-h-[160px]">
@@ -212,7 +338,7 @@ export function AskWidget() {
                   <div className="max-w-[92%] px-3 py-2.5 rounded-xl rounded-bl-sm bg-cyan-500/10 border border-cyan-500/20 text-xs">
                     <FormattedText text={t.answer} />
                     <button
-                      onClick={() => playChunks(t.audioChunks)}
+                      onClick={() => (t.isDemo ? playDemoAudio() : playChunks(t.audioChunks))}
                       className="mt-2 inline-flex items-center gap-1 text-[11px] text-cyan-400/80 hover:text-cyan-300 transition-colors"
                     >
                       <Volume2 className="w-3 h-3" />
@@ -242,6 +368,7 @@ export function AskWidget() {
               className="flex-1 bg-white/5 border border-white/10 rounded-full px-3.5 py-2 text-xs placeholder:text-white/25 focus:outline-none focus:border-cyan-500/50 disabled:opacity-50"
             />
             <button
+              ref={micRef}
               onClick={toggleMic}
               disabled={status === "processing"}
               aria-label={status === "recording" ? "Stop recording" : "Ask by voice"}

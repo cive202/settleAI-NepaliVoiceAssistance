@@ -8,8 +8,14 @@ import { DEMO_AUDIO_SRC, DEMO_TEXT_NE, DEMO_TEXT_EN } from "@/lib/demo";
  * Plays the pre-rendered Nepali reply (lib/demo.ts) straight from the landing
  * page, so a first-time visitor hears the assistant speak without a mic
  * permission prompt, an account, or a live GPU backend behind the site.
+ *
+ * Renders the whole call-to-action block, not just its own button: `children`
+ * (the primary CTA) sits beside it in a button row, and the transcript is
+ * centred underneath *both*. Keeping the transcript out of that row matters —
+ * it is always in the layout so playback causes no shift, and nesting it next
+ * to the primary CTA would drag the pair off-centre and misalign the buttons.
  */
-export function DemoPlayButton() {
+export function DemoPlayButton({ children }: { children?: React.ReactNode }) {
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -41,19 +47,24 @@ export function DemoPlayButton() {
   }
 
   return (
-    <div className="flex flex-col items-center gap-4">
-      <button
-        onClick={toggle}
-        aria-label={playing ? "Stop the demo clip" : "Play the Nepali demo clip"}
-        className="group inline-flex items-center gap-2 px-7 py-4 rounded-full border border-cyan-500/40 bg-cyan-500/5 hover:bg-cyan-500/15 hover:border-cyan-500/70 text-base font-semibold text-cyan-300 transition-all duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
-      >
-        {playing ? (
-          <Square className="w-4 h-4 fill-current" />
-        ) : (
-          <Volume2 className="w-4 h-4" />
-        )}
-        {playing ? "Stop" : "Hear a demo"}
-      </button>
+    <div className="flex flex-col items-center gap-5">
+      <div className="flex flex-col sm:flex-row items-center gap-3">
+        {children}
+        <button
+          onClick={toggle}
+          aria-label={
+            playing ? "Stop the demo clip" : "Play the Nepali demo clip"
+          }
+          className="group inline-flex items-center gap-2 px-7 py-4 rounded-full border border-cyan-300 bg-white hover:bg-cyan-50 text-base font-semibold text-cyan-700 transition-all duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 shadow-sm hover:shadow-md"
+        >
+          {playing ? (
+            <Square className="w-4 h-4 fill-current" />
+          ) : (
+            <Volume2 className="w-4 h-4" />
+          )}
+          {playing ? "Stop" : "Hear a demo"}
+        </button>
+      </div>
 
       {/* Revealed while the clip plays so the listener can follow along. */}
       <div
@@ -63,8 +74,8 @@ export function DemoPlayButton() {
           playing ? "opacity-100" : "opacity-0",
         ].join(" ")}
       >
-        <p className="text-white/80 text-sm leading-relaxed">{DEMO_TEXT_NE}</p>
-        <p className="text-white/30 text-xs mt-1.5 italic">{DEMO_TEXT_EN}</p>
+        <p className="text-slate-700 text-sm leading-relaxed">{DEMO_TEXT_NE}</p>
+        <p className="text-slate-400 text-xs mt-1.5 italic">{DEMO_TEXT_EN}</p>
       </div>
     </div>
   );

@@ -177,7 +177,7 @@ export default function ChatPage() {
   }, []);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="flex flex-col h-screen overflow-hidden bg-[#080d1a] text-white">
       {/* Header */}
       <header className="flex-shrink-0 flex items-center justify-between px-5 py-4 border-b border-white/10">
         <Link href="/" className="flex items-center gap-2.5">
