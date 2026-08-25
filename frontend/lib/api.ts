@@ -73,6 +73,21 @@ export async function* streamText(text: string): AsyncGenerator<StreamEvent> {
   yield* readNdjson(res);
 }
 
+/** Probes the backend so the UI can fall back to the offline demo instead of
+ * letting the user record a turn that has nowhere to go. Never throws: any
+ * failure (DNS, refused, timeout, non-200) just means "not available". */
+export async function checkHealth(): Promise<boolean> {
+  try {
+    const res = await fetch(`${API}/api/health`, {
+      signal: AbortSignal.timeout(4000),
+      cache: "no-store",
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 export async function resetConversation(): Promise<void> {
   await fetch(`${API}/api/reset`, { method: "POST" });
 }

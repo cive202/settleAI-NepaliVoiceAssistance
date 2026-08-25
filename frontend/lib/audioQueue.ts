@@ -13,7 +13,13 @@ export class AudioQueue {
   onDrained?: () => void;
 
   push(base64Mp3: string): void {
-    this.queue.push(`data:audio/mp3;base64,${base64Mp3}`);
+    this.pushSrc(`data:audio/mp3;base64,${base64Mp3}`);
+  }
+
+  /** Queue an already-playable src (a URL, or a data: URI). The demo clip is a
+   * static file rather than a streamed base64 chunk, so it enters here. */
+  pushSrc(src: string): void {
+    this.queue.push(src);
     if (!this.playing) this.playNext();
   }
 

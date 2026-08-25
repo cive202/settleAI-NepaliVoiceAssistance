@@ -1,5 +1,12 @@
 """
-main.py — Entry point for SettleAI Nepali Voice Agent.
+cli_demo.py — Terminal entry point for the SettleAI Nepali voice agent.
+
+Runs the same pipeline the FastAPI service exposes (api.py), but against the
+local machine's microphone and speakers, with no browser or HTTP layer in
+between: VAD endpointing -> Whisper ASR -> Groq LLM -> TTS playback, in a loop.
+Useful for exercising the pipeline in isolation when debugging.
+
+Run from the project root: python cli_demo.py
 
 Only responsible for:
   1. Initialising all components once
@@ -26,7 +33,8 @@ def main() -> None:
     tts = TTS()
 
     print("\n" + "=" * 50)
-    print("Jay Settle Panthi ")
+    print("SettleAI — Nepali Voice Agent (Ctrl-C to quit)")
+    print("Speak in Nepali; recording ends automatically on silence.")
     print("=" * 50 + "\n")
 
     # ── 2. LOOP ──────────────────────────────
@@ -56,5 +64,5 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n\nLA hai ta SETTLE Guys")
+        print("\n\nShutting down. धन्यवाद!")
         pygame.mixer.quit()

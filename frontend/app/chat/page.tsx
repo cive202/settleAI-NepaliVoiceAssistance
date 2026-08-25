@@ -8,7 +8,8 @@ import { ChatBubble, type Message } from "@/components/ChatBubble";
 import { AudioRecorder } from "@/lib/audio";
 import { AudioQueue } from "@/lib/audioQueue";
 import { BargeInDetector } from "@/lib/bargeIn";
-import { streamProcessAudio, resetConversation } from "@/lib/api";
+import { streamProcessAudio, resetConversation, checkHealth } from "@/lib/api";
+import { DEMO_AUDIO_SRC, DEMO_TEXT_NE, DEMO_TEXT_EN } from "@/lib/demo";
 
 const STATUS: Record<AppState, string> = {
   idle: "Tap to speak",
@@ -22,6 +23,9 @@ export default function ChatPage() {
   const [volume, setVolume] = useState(0);
   const [messages, setMessages] = useState<Message[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // null while the health probe is in flight, so we neither promise a live
+  // backend nor flash the demo banner before we know.
+  const [demoMode, setDemoMode] = useState<boolean | null>(null);
   const recorderRef = useRef(new AudioRecorder());
   const audioQueueRef = useRef(new AudioQueue());
   const bargeInRef = useRef(new BargeInDetector());
@@ -31,6 +35,39 @@ export default function ChatPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // The GPU backends are scale-to-zero, so the API is often simply not there.
+  // Find out up front rather than letting the user record a turn into a void.
+  useEffect(() => {
+    let cancelled = false;
+    checkHealth().then((ok) => {
+      if (!cancelled) setDemoMode(!ok);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /** Plays the pre-rendered offline reply as if it were a real turn. Routed
+   * through AudioQueue so stop()/onDrained and the appState transitions behave
+   * exactly as they do on the live path. Barge-in stays off: it needs the
+   * /ws/barge-in socket, which is down for the same reason we're here. */
+  const playDemoTurn = useCallback(() => {
+    const ts = Date.now();
+    setMessages((prev) => [
+      ...prev,
+      { id: `${ts}-u`, role: "user", text: "🎤 …" },
+      { id: `${ts}-a`, role: "assistant", text: DEMO_TEXT_NE },
+    ]);
+    const queue = audioQueueRef.current;
+    queue.onDrained = () => {
+      setAppState("idle");
+      setVolume(0);
+    };
+    setAppState("speaking");
+    queue.pushSrc(DEMO_AUDIO_SRC);
+    queue.finish();
+  }, []);
 
   const handleBargeIn = useCallback(async (preRoll: Float32Array[]) => {
     bargeInRef.current.stop();
@@ -47,6 +84,12 @@ export default function ChatPage() {
   }, []);
 
   const handleMic = useCallback(async () => {
+    if (demoMode && appState === "idle") {
+      setError(null);
+      playDemoTurn();
+      return;
+    }
+
     if (appState === "idle") {
       setError(null);
       try {
@@ -104,13 +147,20 @@ export default function ChatPage() {
         if (e instanceof DOMException && e.name === "AbortError") {
           // Cancelled deliberately by a barge-in — handleBargeIn already
           // moved state to "recording", nothing else to do here.
+        } else if (e instanceof TypeError) {
+          // fetch() rejects with TypeError only when the request never reached
+          // a server (DNS, refused, CORS preflight). A real HTTP error would
+          // have surfaced as the Error thrown by readNdjson instead — so this
+          // specifically means the backend went away mid-turn.
+          setDemoMode(true);
+          playDemoTurn();
         } else {
           setError(e instanceof Error ? e.message : "Something went wrong");
           setAppState("idle");
         }
       }
     }
-  }, [appState, handleBargeIn]);
+  }, [appState, handleBargeIn, demoMode, playDemoTurn]);
 
   const handleReset = useCallback(async () => {
     audioQueueRef.current.stop();
@@ -161,6 +211,14 @@ export default function ChatPage() {
 
       {/* Controls */}
       <div className="flex-shrink-0 flex flex-col items-center gap-3 px-6 py-6 border-t border-white/10">
+        {demoMode && (
+          <div className="max-w-md text-center space-y-1">
+            <p className="text-amber-400/90 text-xs">
+              Demo mode — the GPU backend is offline. Tap the mic for a sample reply.
+            </p>
+            <p className="text-white/25 text-[11px] italic">{DEMO_TEXT_EN}</p>
+          </div>
+        )}
         {error && <p className="text-red-400 text-xs text-center">{error}</p>}
         <p className="text-white/30 text-xs tracking-wide">{STATUS[appState]}</p>
         <MicButton state={appState} volume={volume} onClick={handleMic} />

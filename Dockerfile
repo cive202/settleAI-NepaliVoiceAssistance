@@ -37,7 +37,7 @@ COPY asr/ ./asr/
 COPY rag/ ./rag/
 COPY slack_bot/ ./slack_bot/
 COPY scripts/ ./scripts/
-COPY faq.json electrical.json ./
+COPY data/ ./data/
 COPY chroma_db/ ./chroma_db/
 
 # No microphone/speaker in a container — silence pygame.mixer's audio device

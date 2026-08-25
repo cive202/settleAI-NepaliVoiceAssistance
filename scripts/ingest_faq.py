@@ -20,7 +20,7 @@ import json
 
 from rag import RAGService
 
-FAQ_PATH = "faq.json"
+FAQ_PATH = "data/faq.json"
 
 
 def _dept_hod_qa(dept: dict) -> tuple[str, str]:

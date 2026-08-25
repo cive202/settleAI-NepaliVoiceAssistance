@@ -1,36 +1,32 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SettleAI — frontend
 
-## Getting Started
-
-First, run the development server:
+Next.js (App Router) client for the Nepali voice assistant. See the
+[root README](../README.md) for the full system.
 
 ```bash
+npm install
+echo "NEXT_PUBLIC_API_URL=http://localhost:8000" > .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`NEXT_PUBLIC_API_URL` is inlined at **build** time, not read at runtime — changing it
+requires a rebuild.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Routes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Route | |
+|---|---|
+| `/` | Landing page, with an offline demo clip that needs no backend |
+| `/chat` | Voice chat — mic capture, streamed audio playback, barge-in |
+| `/kec-demo` | Mock college site showing `<AskWidget/>` embedded in a third-party page |
 
-## Learn More
+With no backend reachable, `/` and `/chat` fall back to a pre-rendered Nepali reply
+(`lib/demo.ts`) instead of erroring.
 
-To learn more about Next.js, take a look at the following resources:
+## Layout
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `lib/audio.ts` — mic capture and WAV encoding
+- `lib/audioQueue.ts` — gapless playback of streamed MP3 chunks
+- `lib/bargeIn.ts` — streams mic frames to `/ws/barge-in` during playback
+- `lib/api.ts` — NDJSON stream reader and health probe
+- `lib/demo.ts` — the offline demo reply

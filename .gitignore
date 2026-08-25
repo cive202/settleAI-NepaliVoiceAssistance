@@ -13,3 +13,4 @@ logs/
 
 # Ad-hoc RunPod/console log dumps pulled in while debugging.
 logs*.txt
+build-logs*.txt

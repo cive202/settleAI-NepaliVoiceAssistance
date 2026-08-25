@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Mic, Brain, Volume2, ArrowRight } from "lucide-react";
+import { DemoPlayButton } from "@/components/DemoPlayButton";
 
 export default function LandingPage() {
   return (
@@ -52,13 +53,18 @@ export default function LandingPage() {
           </p>
         </div>
 
-        <Link
-          href="/chat"
-          className="group inline-flex items-center gap-2 px-8 py-4 bg-cyan-500 hover:bg-cyan-400 rounded-full text-base font-semibold transition-all duration-200 shadow-[0_0_32px_rgba(6,182,212,0.4)] hover:shadow-[0_0_52px_rgba(6,182,212,0.65)]"
-        >
-          Start Talking
-          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-        </Link>
+        <div className="flex flex-col items-center gap-5">
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <Link
+              href="/chat"
+              className="group inline-flex items-center gap-2 px-8 py-4 bg-cyan-500 hover:bg-cyan-400 rounded-full text-base font-semibold transition-all duration-200 shadow-[0_0_32px_rgba(6,182,212,0.4)] hover:shadow-[0_0_52px_rgba(6,182,212,0.65)]"
+            >
+              Start Talking
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+            <DemoPlayButton />
+          </div>
+        </div>
 
         {/* Feature cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl w-full mt-4">
@@ -75,13 +81,13 @@ export default function LandingPage() {
           <FeatureCard
             icon={<Volume2 className="w-5 h-5" />}
             title="Natural TTS"
-            desc="Fluent Nepali text-to-speech playback with gTTS"
+            desc="Native Nepali speech from ai4bharat/indic-parler-tts on a RunPod GPU"
           />
         </div>
       </main>
 
       <footer className="text-center py-6 text-white/20 text-xs">
-        Built with Next.js · FastAPI · Whisper · gTTS
+        Built with Next.js · FastAPI · Silero VAD · Whisper · Groq · indic-parler-tts
       </footer>
     </div>
   );
